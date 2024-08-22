@@ -1,0 +1,10 @@
+{
+    "folder": {
+        "name": "文件夹路径",
+        "description": "通过文件夹路径获取tag"
+    },
+    "wnacg": {
+        "name": "绅士漫画",
+        "description": "通过绅士漫画获取tag"
+    }
+}
