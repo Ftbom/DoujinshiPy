@@ -28,7 +28,7 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
                             type = SourceType.web, source = source_name)
                 # save cover
                 with open(f".data/thumb/{str(doujinshi.id)}.jpg", "wb") as f:
-                    res = requests.get(metadata["cover"], proxies = app_state["settings"]["proxy"])
+                    res = requests.get(metadata["cover"]["url"], proxies = app_state["settings"]["proxy"], headers = metadata["cover"]["headers"])
                     f.write(res.content)
                 session.add(doujinshi) # save to database
                 logging.info(f"add {id} of {source_name} source to library")

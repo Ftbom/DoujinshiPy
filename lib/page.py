@@ -99,7 +99,7 @@ def cache_page(client, type, id, num, arg1, arg2, is_7z = False):
         return
     try:
         if type == SourceType.web:
-            page_bytes = requests.get(arg1[num], proxies = arg2).content # get url content
+            page_bytes = requests.get(arg1["urls"][num], proxies = arg2, headers = arg1["headers"]).content # get url content
         elif type == SourceType.cloud:
             page_io = arg1.open(arg2[num]) # get remote zip file
             page_bytes = page_io.read()
@@ -122,7 +122,7 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
     client = app_state["memcached_client"]
     page_urls = sources[doujinshi.source].get_pages(doujinshi.identifier, app_state["settings"]["proxy"])
-    pagecount = len(page_urls)
+    pagecount = len(page_urls["urls"])
     id = str(doujinshi.id)
     count = 0
     while count < 3000:

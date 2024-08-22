@@ -1,8 +1,6 @@
 import json
-import time
 import uvicorn
 import logging
-import threading
 from lib.utils import *
 from fastapi import FastAPI
 from sqlmodel import SQLModel, create_engine
@@ -40,11 +38,9 @@ SQLModel.metadata.create_all(app_state["database_engine"])
 from api import *
 
 if __name__ == '__main__':
-    threading.Thread(target = os.system, args = ("memcached", )).start()
-    time.sleep(5)
     try:
         app_state["memcached_client"].flush_all()
     except ConnectionRefusedError:
-        print("please install memcached and add to PATH")
+        print("please start memcached first")
         exit()
-    uvicorn.run(app = app, host = "127.0.0.1", port = 9000)
+    uvicorn.run(app = app, host = app_state["settings"]["host"], port = app_state["settings"]["port"])

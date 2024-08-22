@@ -260,7 +260,7 @@ def get_doujinshi_page_by_number(id: str, num: int):
             return {"error": f"doujinshi {id} not contain the {num} page"}
         if page_status == 0:
             client.delete(f"{id}_{num}") # reset
-            return {"error": f"fail to get page{num} of doujinshi {id}"}
+            return {"error": f"fail to get page {num} of doujinshi {id}"}
         if os.path.exists(file_path):
             return FileResponse(file_path)
         count = count + 1
@@ -268,7 +268,7 @@ def get_doujinshi_page_by_number(id: str, num: int):
     return {"error": f"fail to get page {num} of doujinshi {id}"}
 
 @app.get("/doujinshi/{id}/thumbnail")
-def get_thumbnail(id) -> FileResponse:
+def get_thumbnail(id: str) -> FileResponse:
     thumb_path = get_thumb_by_id(app_state["database_engine"], id)
     if thumb_path == None:
         return {"error": f"doujinshi {id} not exist"}
@@ -277,3 +277,34 @@ def get_thumbnail(id) -> FileResponse:
 @app.post("/search")
 def search(parameter: SearchParameter) -> dict:
     return {"msg": "success", "data": search_doujinshi(app_state["database_engine"], parameter)}
+
+@app.get("/web/{source_name}/search")
+def search_web(source_name: str, query: str, page: int) -> dict:
+    sources = app_state["sources"]
+    if not source_name in sources:
+        return {"error": "incorrect source name"}
+    if not sources[source_name].TYPE == SourceType.web: # just web source support
+        return {"error": "this source does not support web search"}
+    obj = sources[source_name]
+    if hasattr(obj, "search") and callable(getattr(obj, "search")):
+        return {"msg": "success", "data": obj.search(query, page, app_state["settings"]["proxy"])}
+    else:
+        return {"error": "this source does not support web search"}
+
+@app.get("/web/{source_name}/{id}/metadata")
+def get_web_doujinshi(source_name: str, id: str) -> dict:
+    sources = app_state["sources"]
+    if not source_name in sources:
+        return {"error": "incorrect source name"}
+    if not sources[source_name].TYPE == SourceType.web: # just web source support
+        return {"error": "this source does not support web metadata"}
+    return {"msg": "success", "data": sources[source_name].get_metadata(id, app_state["settings"]["proxy"])}
+
+@app.get("/web/{source_name}/{id}/pages")
+def get_web_doujinshi_pages(source_name: str, id: str) -> dict:
+    sources = app_state["sources"]
+    if not source_name in sources:
+        return {"error": "incorrect source name"}
+    if not sources[source_name].TYPE == SourceType.web: # just web source support
+        return {"error": "this source does not support web pages"}
+    return {"msg": "success", "data": sources[source_name].get_pages(id, app_state["settings"]["proxy"])}
