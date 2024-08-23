@@ -10,7 +10,7 @@ TODO:
 
 ## Onedrive
 
-个人版appfolder
+个人版appfolder，仅支持zip文件
 
 重定向链接：http://localhost:5000/getAToken
 
@@ -19,6 +19,8 @@ TODO:
 ```
 
 ## Local
+
+支持zip、7z、rar文件
 
 ```
 "name": {"type": "local", config: {"path": ""}}

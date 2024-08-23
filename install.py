@@ -7,6 +7,10 @@ os.makedirs(".data", exist_ok = True)
 # create doujinshi library folder
 os.makedirs(".data/doujinshi", exist_ok = True)
 # create config file
+if os.path.exists(".data/config.json"):
+    c = input("config file already exist, replace or not? [Y/n]")
+    if not c in ["", "y", "Y"]:
+        exit()
 print("create config file...")
 with open(".data/config.json", "w", encoding = "utf-8") as f:
     f.write(json.dumps({
@@ -14,7 +18,11 @@ with open(".data/config.json", "w", encoding = "utf-8") as f:
             "host": "127.0.0.1",
             "port": 9000,
             "proxy": "",
-            "proxy_webpage": False
+            "proxy_webpage": False,
+            "auth": {
+                "user": "demo",
+                "passwd": "demo"
+            }
         },
         "source": {
             "Local": {

@@ -2,6 +2,7 @@ import os
 import uuid
 import time
 import py7zr
+import rarfile
 import zipfile
 import logging
 import requests
@@ -16,6 +17,16 @@ def zip_filelist(zip_file, sort: bool) -> list:
         filelist.sort()
     # get file list
     for file in zip_file.infolist():
+        if file.is_dir():
+            filelist.remove(file.filename)
+    return filelist
+
+def rar_filelist(rar_file, sort: bool) -> list:
+    filelist = rar_file.namelist()
+    if sort:
+        filelist.sort()
+    # get file list
+    for file in rar_file.infolist():
         if file.is_dir():
             filelist.remove(file.filename)
     return filelist
@@ -42,12 +53,20 @@ def zip_pagecount(file_path: str) -> int:
     zip_file.close()
     return len(filelist)
 
+def rar_pagecount(file_path: str) -> int:
+    rar_file = rarfile.RarFile(file_path, "r")
+    filelist = rar_filelist(rar_file, False)
+    rar_file.close()
+    return len(filelist)
+
 def local_pagecount(file_path: str) -> int:
     name, ext = os.path.splitext(file_path)
     if ext in [".zip", ".ZIP"]:
         return zip_pagecount(file_path)
     elif ext in [".7z", ".7Z"]:
         return sevenzip_pagecount(file_path)
+    elif ext in [".rar", ".RAR"]:
+        return rar_pagecount(file_path)
 
 def cloud_pagecount(download_info: dict) -> int:
     zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
@@ -198,6 +217,30 @@ def zip_page_read(file_path: str, client, id) -> None:
         time.sleep(0.1)
     zip_file.close()
 
+def rar_page_read(file_path: str, client, id) -> None:
+    rar_file = rarfile.RarFile(file_path, "r")
+    filelist = rar_filelist(rar_file, True)
+    pagecount = len(filelist)
+    count = 0
+    while count < 300:
+        count = count + 1
+        try:
+            num = client.get(f"{id}_page")
+        except:
+            time.sleep(0.1)
+            num = client.get(f"{id}_page")
+        if num != None:
+            if num >= pagecount or num < 0:
+                client.set(f"{id}_{num}", -1)
+                client.delete(f"{id}_page")
+                continue
+            threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                                    num, rar_file, filelist)).start()
+            client.delete(f"{id}_page")
+            count = 0
+        time.sleep(0.1)
+    rar_file.close()
+
 def sevenzip_page_read(file_path: str, client, id) -> None:
     sevenzip_file = py7zr.SevenZipFile(file_path, "r")
     filelist = sevenzip_filelist(sevenzip_file, True)
@@ -231,6 +274,8 @@ def local_page_read(app_state, doujinshi: Doujinshi) -> None:
         zip_page_read(file_path, client, str(doujinshi.id))
     elif ext in [".7z", ".7Z"]:
         sevenzip_page_read(file_path, client, str(doujinshi.id))
+    elif ext in [".rar", ".RAR"]:
+        rar_page_read(file_path, client, str(doujinshi.id))
 
 def read_pages(app_state, id: str) -> None:
     client = app_state["memcached_client"]

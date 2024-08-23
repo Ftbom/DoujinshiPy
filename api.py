@@ -1,14 +1,24 @@
 import os
+import json
+import hashlib
 import importlib
 import threading
 from enum import Enum
 from lib.scan import *
 from lib.page import *
+from lib.utils import *
 from lib.batch import *
 from lib.database import *
 from pydantic import BaseModel
+from fastapi import FastAPI, Depends
 from lib.utils import get_file_infos
+from pymemcache.client.base import Client
+from sqlmodel import SQLModel, create_engine
 from starlette.responses import FileResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+class PasswdAuth(BaseModel):
+    passwd: str
 
 class StartScan(BaseModel):
     start: bool
@@ -43,15 +53,50 @@ class SearchParameter(BaseModel):
     group: str
     source: str
 
-from app import app, app_state
+class JsonSerde(object):
+    def serialize(self, key, value):
+        if isinstance(value, str):
+            return value.encode("utf-8"), 1
+        return json.dumps(value).encode("utf-8"), 2
+
+    def deserialize(self, key, value, flags):
+       if flags == 1:
+           return value.decode("utf-8")
+       if flags == 2:
+           return json.loads(value.decode("utf-8"))
+       raise Exception("Unknown serialization format")
+
+app = FastAPI()
+
+salt = "uzfWtX8F9bUa691ve55BFHyRh1Br6b0mRhcJWqWFynXxhuR10jE"
+oauth2 = OAuth2PasswordBearer(tokenUrl = "/token")
+
+app_state = {
+    "settings": load_settings(),
+    "sources": load_sources(), # load source configration from file
+    "database_engine": create_engine("sqlite:///.data/database.db"), # load database
+    "memcached_client": Client("localhost", serde=JsonSerde()) # create client
+}
+
+SQLModel.metadata.create_all(app_state["database_engine"])
 
 @app.get("/")
-def get_status() -> dict:
+def get_status(token: str = Depends(oauth2)) -> dict:
     return {"sources": list(app_state["sources"]),
             "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
 
+@app.post("/token")
+def get_token(input_data : OAuth2PasswordRequestForm = Depends()):
+    user_str = app_state["settings"]["auth"]["user"]
+    passwd_str = app_state["settings"]["auth"]["passwd"]
+    if (input_data.username == user_str) and (input_data.password == passwd_str):
+        return {"access_token": hashlib.sha256((app_state["settings"]["auth"]["passwd"] + salt).encode("utf-8")).hexdigest(),
+                "token_type": "bearer"}
+    else:
+        return {"error": "wrong username or password"}
+
 @app.get("/scan")
-def get_scan_status() -> dict:
+def get_scan_status(token: str = Depends(oauth2)) -> dict:
     client = app_state["memcached_client"]
     scan_status_code = client.get("scan_status_code") # get status code of the scanning process
     scan_source_name = client.get("scan_source_name") # get source name of the scanning process
@@ -67,7 +112,7 @@ def get_scan_status() -> dict:
     return {"msg": scan_info[scan_status_code]} # return scan status
 
 @app.post("/scan")
-def scan_library(scan: StartScan) -> dict:
+def scan_library(scan: StartScan, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
     if not scan.start: # start scan or not
         return {"msg": ""}
@@ -87,7 +132,7 @@ def scan_library(scan: StartScan) -> dict:
         return {"msg": f"scanning has started, get the status of scanning process: /scan"}
 
 @app.post("/add")
-def add_to_library(add: AddLibrary) -> dict:
+def add_to_library(add: AddLibrary, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
     if not add.source_name in sources:
         return {"error": "incorrect source name"}
@@ -105,7 +150,7 @@ def add_to_library(add: AddLibrary) -> dict:
         return {"msg": f"adding has started, get the status of adding process: /add"}
 
 @app.get("/add")
-def get_add_status() -> dict:
+def get_add_status(token: str = Depends(oauth2)) -> dict:
     client = app_state["memcached_client"]
     add_status = client.get("add_status")
     if add_status == None:
@@ -115,7 +160,7 @@ def get_add_status() -> dict:
     return {"msg": add_status}
 
 @app.post("/batch")
-def batch_operation(setting: BatchOperation) -> dict:
+def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> dict:
     client = app_state["memcached_client"]
     # get status
     operation_status = client.get("batch_operation")
@@ -141,7 +186,7 @@ def batch_operation(setting: BatchOperation) -> dict:
             return {"msg": "start getting tag, get the status: /batch"}
 
 @app.get("/batch")
-def get_batch_operation_status() -> dict:
+def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
     client = app_state["memcached_client"]
     operation_status = client.get("batch_operation")
     if operation_status == None:
@@ -151,11 +196,11 @@ def get_batch_operation_status() -> dict:
     return {"msg": operation_status}
 
 @app.get("/group")
-def get_all_groups() -> dict:
+def get_all_groups(token: str = Depends(oauth2)) -> dict:
     return {"msg": "success", "data": get_group_list(app_state["database_engine"])}
 
 @app.get("/group/{id}")
-def get_doujinshi_by_group_id(id: str) -> dict:
+def get_doujinshi_by_group_id(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         result = get_doujinshi_by_group(app_state["database_engine"], id)
         if result == {}:
@@ -165,7 +210,7 @@ def get_doujinshi_by_group_id(id: str) -> dict:
         return {"error": f"fail to get doujinshi by group {id}"}
 
 @app.delete("/group/{id}")
-def delete_group(id: str) -> dict:
+def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         if delete_group_by_id(app_state["database_engine"], id):
             return {"msg": f"success to delete group {id}"}
@@ -175,7 +220,7 @@ def delete_group(id: str) -> dict:
         return {"error": f"fail to delete group {id}"}
 
 @app.put("/group/{id}")
-def update_group_name(id: str, group_name: GroupName) -> dict:
+def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth2)) -> dict:
     try:
         res = rename_group_by_id(app_state["database_engine"], id, group_name.name)
         if res == 1:
@@ -188,11 +233,11 @@ def update_group_name(id: str, group_name: GroupName) -> dict:
         return {"error": f"fail to rename group {id}"}
 
 @app.get("/doujinshi")
-def get_all_doujinshis(random: Union[int, None] = None) -> dict:
+def get_all_doujinshis(random: Union[int, None] = None, token: str = Depends(oauth2)) -> dict:
     return {"msg": "success", "data": get_doujinshi_list(app_state["database_engine"], random)}
 
 @app.get("/doujinshi/{id}/metadata")
-def get_doujinshi_metadata(id: str) -> dict:
+def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         result = get_doujinshi_by_id(app_state["database_engine"], id)
         if result == {}:
@@ -202,7 +247,7 @@ def get_doujinshi_metadata(id: str) -> dict:
         return {"error": f"fail to get doujinshi by id {id}"}
 
 @app.put("/doujinshi/{id}/metadata")
-def set_doujinshi_metadata(id: str, edit: EditMetaData) -> dict:
+def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oauth2)) -> dict:
     try:
         if set_metadata(app_state["database_engine"], id, edit):
             return {"msg": f"success to set metadata of doujinshi {id}"}
@@ -212,7 +257,7 @@ def set_doujinshi_metadata(id: str, edit: EditMetaData) -> dict:
         return {"error": f"fail to set metadata of doujinshi {id}"}
 
 @app.delete("/doujinshi/{id}/metadata")
-def delete_doujinshi_metadata(id: str) -> dict:
+def delete_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         if delete_metadata(app_state["database_engine"], id):
             return {"msg": f"success to delete metadata of doujinshi {id}"}
@@ -222,7 +267,7 @@ def delete_doujinshi_metadata(id: str) -> dict:
         return {"error": f"fail to delete metadata of doujinshi {id}"}
 
 @app.get("/doujinshi/{id}/pages")
-def get_doujinshi_pages(id: str) -> dict:
+def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         result = get_page_urls(app_state, id)
         if result == []:
@@ -232,7 +277,7 @@ def get_doujinshi_pages(id: str) -> dict:
         return {"error": f"fail to get pages of doujinshi {id}"}
 
 @app.get("/doujinshi/{id}/page/{num}")
-def get_doujinshi_page_by_number(id: str, num: int):
+def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
     client = app_state["memcached_client"]
     read_thread = client.get(f"{id}_read")
     if read_thread == None:
@@ -268,18 +313,18 @@ def get_doujinshi_page_by_number(id: str, num: int):
     return {"error": f"fail to get page {num} of doujinshi {id}"}
 
 @app.get("/doujinshi/{id}/thumbnail")
-def get_thumbnail(id: str) -> FileResponse:
+def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     thumb_path = get_thumb_by_id(app_state["database_engine"], id)
     if thumb_path == None:
         return {"error": f"doujinshi {id} not exist"}
     return FileResponse(thumb_path)
 
 @app.post("/search")
-def search(parameter: SearchParameter) -> dict:
+def search(parameter: SearchParameter, token: str = Depends(oauth2)) -> dict:
     return {"msg": "success", "data": search_doujinshi(app_state["database_engine"], parameter)}
 
 @app.get("/web/{source_name}/search")
-def search_web(source_name: str, query: str, page: int) -> dict:
+def search_web(source_name: str, query: str, page: int, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
     if not source_name in sources:
         return {"error": "incorrect source name"}
@@ -292,7 +337,7 @@ def search_web(source_name: str, query: str, page: int) -> dict:
         return {"error": "this source does not support web search"}
 
 @app.get("/web/{source_name}/{id}/metadata")
-def get_web_doujinshi(source_name: str, id: str) -> dict:
+def get_web_doujinshi(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
     if not source_name in sources:
         return {"error": "incorrect source name"}
@@ -301,7 +346,7 @@ def get_web_doujinshi(source_name: str, id: str) -> dict:
     return {"msg": "success", "data": sources[source_name].get_metadata(id, app_state["settings"]["proxy"])}
 
 @app.get("/web/{source_name}/{id}/pages")
-def get_web_doujinshi_pages(source_name: str, id: str) -> dict:
+def get_web_doujinshi_pages(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
     if not source_name in sources:
         return {"error": "incorrect source name"}

@@ -17,7 +17,7 @@ class Source:
             if child.is_dir():
                 doujinshi.extend(self.get_doujinshi(child))
             else:
-                if child.suffix in [".zip", ".ZIP", ".7z", ".7Z"]:
+                if child.suffix in [".zip", ".ZIP", ".7z", ".7Z", ".rar", ".RAR"]:
                     doujinshi.append((child.stem, child.relative_to(self.__path).as_posix())) # (file name, relative file path)
         return doujinshi
     

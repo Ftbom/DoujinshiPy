@@ -3,6 +3,7 @@ import os
 import time
 import py7zr
 import zipfile
+import rarfile
 import remotezip
 from PIL import Image
 from lib.database import Doujinshi, SourceType
@@ -42,12 +43,26 @@ def zip_thumbnail(file_path: str, id: str) -> None:
         generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
     zip_file.close()
 
+def rar_thumbnail(file_path: str, id: str) -> None:
+    rar_file = rarfile.RarFile(file_path, "r")
+    filelist = rar_file.namelist()
+    filelist.sort()
+    # get file list
+    for file in rar_file.infolist():
+        if file.is_dir():
+            filelist.remove(file.filename)
+    with rar_file.open(filelist[0]) as image_bytes:
+        generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
+    rar_file.close()
+
 def local_thumbnail(file_path: str, id: str) -> None:
     name, ext = os.path.splitext(file_path)
     if ext in [".zip", ".ZIP"]:
         zip_thumbnail(file_path, id)
     elif ext in [".7z", ".7Z"]:
         sevenzip_thumbnail(file_path, id)
+    elif ext in [".rar", ".RAR"]:
+        rar_thumbnail(file_path, id)
 
 def cloud_thumbnail(download_info: dict, id: str) -> None:
     zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
