@@ -7,6 +7,14 @@ TODO:
 * 支持ehentai，nhentai等源
 * 支持其他云储存
 
+## 安装
+
+**需要安装unrar和memcached**
+
+```shell
+python install.py
+```
+
 ## Onedrive
 
 个人版appfolder，仅支持zip文件
