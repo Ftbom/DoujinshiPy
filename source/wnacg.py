@@ -6,12 +6,16 @@ class Source:
     TYPE = SourceType.web
 
     def __init__(self, config) -> None:
-        self.__base_url = "https://wnacg.com"
+        if not config["proxy"] == "":
+            self.__proxies = {"http": config["proxy"], "https": config["proxy"]}
+        else:
+            self.__proxies = {}
+        self.__base_url = "https://www.wnacg.com"
         pass
 
-    def search(self, query: str, page: int, proxy) -> list:
+    def search(self, query: str, page: int) -> list:
         results = []
-        res = requests.get(f"{self.__base_url}/search?q={query}&m=&syn=yes&f=_all&s=create_time_DESC&p={page}", proxies = proxy,
+        res = requests.get(f"{self.__base_url}/search?q={query}&m=&syn=yes&f=_all&s=create_time_DESC&p={page}", proxies = self.__proxies,
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         soup = BeautifulSoup(res.content, "html.parser")
         for item in soup.find_all(class_ = "gallary_item"):
@@ -23,8 +27,8 @@ class Source:
             results.append({"id": id_, "title": title, "thumb": {"url": thumb, "headers": {}}})
         return results
 
-    def get_metadata(self, id: str, proxy) -> dict:
-        res = requests.get(f"{self.__base_url}/photos-index-aid-{id}.html", proxies = proxy,
+    def get_metadata(self, id: str) -> dict:
+        res = requests.get(f"{self.__base_url}/photos-index-aid-{id}.html", proxies = self.__proxies,
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         soup = BeautifulSoup(res.content, "html.parser")
         title = soup.find("h2").get_text()
@@ -36,9 +40,9 @@ class Source:
             tags.add(tag.get_text())
         return {"id": id, "title": title, "pagecount": pagecount, "tags": list(tags), "cover": {"url": cover, "headers": {}}}
 
-    def get_pages(self, id: str, proxy) -> dict:
+    def get_pages(self, id: str) -> dict:
         urls = []
-        res = requests.get(f"{self.__base_url}/photos-gallery-aid-{id}.html", proxies = proxy,
+        res = requests.get(f"{self.__base_url}/photos-gallery-aid-{id}.html", proxies = self.__proxies,
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         start = res.text.find("imglist")
         end = res.text.find("喜歡紳士")

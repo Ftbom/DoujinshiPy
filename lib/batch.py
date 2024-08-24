@@ -66,8 +66,8 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 try:
                     func(app_state, result) # run function to get cover
                     logging.info(f"get cover {id}.jpg")
-                except:
-                    logging.error(f"failed to get cover {id}.jpg")
+                except Exception as e:
+                    logging.error(f"failed to get cover {id}.jpg, error message: {e}")
             client.set("batch_operation", f"getting cover {count}/{num}")
         client.set("batch_operation", "finished")
 

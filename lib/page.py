@@ -81,11 +81,15 @@ def get_page_count(sources, session, doujinshi: Doujinshi) -> int:
     if doujinshi.type == SourceType.web:
         raise RuntimeError(f"fail to get page count of doujinshi {str(doujinshi.id)}")
     # pagecount is none, get pagecount and save it
-    file_identifier = sources[doujinshi.source].get_file(doujinshi.identifier)
-    if doujinshi.type == SourceType.local:
-        pagecount = local_pagecount(file_identifier)
-    elif doujinshi.type == SourceType.cloud:
-        pagecount = cloud_pagecount(file_identifier)
+    try:
+        file_identifier = sources[doujinshi.source].get_file(doujinshi.identifier)
+        if doujinshi.type == SourceType.local:
+            pagecount = local_pagecount(file_identifier)
+        elif doujinshi.type == SourceType.cloud:
+            pagecount = cloud_pagecount(file_identifier)
+    except Exception as e:
+        logging.error(f"fail to get pagecount of doujinshi {str(doujinshi.id)}, error message: {e}")
+        return 0
     doujinshi.pagecount = pagecount
     session.add(doujinshi)
     session.commit()
@@ -105,7 +109,7 @@ def get_page_urls(app_state, id: str) -> list[str]:
         if not result.source in app_state["sources"]:
             return []
         if (result.type == SourceType.web) and (not app_state["settings"]["proxy_webpage"]):
-            return app_state["sources"][result.source].get_pages(result.identifier, app_state["settings"]["proxy"]) # get web url of pages
+            return app_state["sources"][result.source].get_pages(result.identifier) # get web url of pages
         pagecount = get_page_count(app_state["sources"], session, result)
         page_list = []
         for i in range(pagecount):
@@ -133,14 +137,18 @@ def cache_page(client, type, id, num, arg1, arg2, is_7z = False):
         os.makedirs(f".data/cache/{id}", exist_ok = True)
         with open(page_path, "wb") as f:
             f.write(page_bytes)
-    except:
+    except Exception as e:
         client.set(f"{id}_{num}", 0)
-        logging.error(f"fail to get page{num} of doujinshi {id}")
+        logging.error(f"fail to get page {num} of doujinshi {id}, error message: {e}")
 
 def web_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
     client = app_state["memcached_client"]
-    page_urls = sources[doujinshi.source].get_pages(doujinshi.identifier, app_state["settings"]["proxy"])
+    try:
+        page_urls = sources[doujinshi.source].get_pages(doujinshi.identifier)
+    except Exception as e:
+        logging.error(f"fail to read doujinshi {str(doujinshi.id)}, error message: {e}")
+        return
     pagecount = len(page_urls["urls"])
     id = str(doujinshi.id)
     count = 0
@@ -167,9 +175,13 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
 def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
     client = app_state["memcached_client"]
-    download_info = sources[doujinshi.source].get_file(doujinshi.identifier)
-    zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
+    try:
+        download_info = sources[doujinshi.source].get_file(doujinshi.identifier)
+        zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
                             support_suffix_range = download_info["suffix_range"], proxies = download_info["proxy"])
+    except Exception as e:
+        logging.error(f"fail to read doujinshi {str(doujinshi.id)}, error message: {e}")
+        return
     filelist = zip_filelist(zip_file, True)
     pagecount = len(filelist)
     id = str(doujinshi.id)
@@ -268,14 +280,17 @@ def sevenzip_page_read(file_path: str, client, id) -> None:
 def local_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
     client = app_state["memcached_client"]
-    file_path = sources[doujinshi.source].get_file(doujinshi.identifier)
-    name, ext = os.path.splitext(file_path)
-    if ext in [".zip", ".ZIP"]:
-        zip_page_read(file_path, client, str(doujinshi.id))
-    elif ext in [".7z", ".7Z"]:
-        sevenzip_page_read(file_path, client, str(doujinshi.id))
-    elif ext in [".rar", ".RAR"]:
-        rar_page_read(file_path, client, str(doujinshi.id))
+    try:
+        file_path = sources[doujinshi.source].get_file(doujinshi.identifier)
+        name, ext = os.path.splitext(file_path)
+        if ext in [".zip", ".ZIP"]:
+            zip_page_read(file_path, client, str(doujinshi.id))
+        elif ext in [".7z", ".7Z"]:
+            sevenzip_page_read(file_path, client, str(doujinshi.id))
+        elif ext in [".rar", ".RAR"]:
+            rar_page_read(file_path, client, str(doujinshi.id))
+    except Exception as e:
+        logging.error(f"fail to read doujinshi {str(doujinshi.id)}, error message: {e}")
 
 def read_pages(app_state, id: str) -> None:
     client = app_state["memcached_client"]

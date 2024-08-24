@@ -6,7 +6,7 @@ from lib.database import Doujinshi
 
 def get_cover(app_state, doujinshi: Doujinshi) -> None:
     name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
-    res = requests.get(f"https://wnacg.com/search/?q={name}&f=_all&s=create_time_DESC&syn=yes",
+    res = requests.get(f"https://www.wnacg.com/search/?q={name}&f=_all&s=create_time_DESC&syn=yes",
                 proxies = app_state["settings"]["proxy"],
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
     soup = BeautifulSoup(res.content, "html.parser")

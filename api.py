@@ -1,6 +1,6 @@
 import os
+import jwt
 import json
-import hashlib
 import importlib
 import threading
 from enum import Enum
@@ -68,7 +68,7 @@ class JsonSerde(object):
 
 app = FastAPI()
 
-salt = "uzfWtX8F9bUa691ve55BFHyRh1Br6b0mRhcJWqWFynXxhuR10jE"
+secret_key = "uzfWtX8F9bUa691ve55BFHyRh1Br6b0mRhcJWqWFynXxhuR10jE"
 oauth2 = OAuth2PasswordBearer(tokenUrl = "/token")
 
 app_state = {
@@ -90,7 +90,7 @@ def get_token(input_data : OAuth2PasswordRequestForm = Depends()):
     user_str = app_state["settings"]["auth"]["user"]
     passwd_str = app_state["settings"]["auth"]["passwd"]
     if (input_data.username == user_str) and (input_data.password == passwd_str):
-        return {"access_token": hashlib.sha256((app_state["settings"]["auth"]["passwd"] + salt).encode("utf-8")).hexdigest(),
+        return {"access_token": jwt.encode({"user": f"{user_str}_{passwd_str}"}, secret_key, algorithm = "HS256"),
                 "token_type": "bearer"}
     else:
         return {"error": "wrong username or password"}
@@ -332,7 +332,7 @@ def search_web(source_name: str, query: str, page: int, token: str = Depends(oau
         return {"error": "this source does not support web search"}
     obj = sources[source_name]
     if hasattr(obj, "search") and callable(getattr(obj, "search")):
-        return {"msg": "success", "data": obj.search(query, page, app_state["settings"]["proxy"])}
+        return {"msg": "success", "data": obj.search(query, page)}
     else:
         return {"error": "this source does not support web search"}
 
@@ -343,7 +343,7 @@ def get_web_doujinshi(source_name: str, id: str, token: str = Depends(oauth2)) -
         return {"error": "incorrect source name"}
     if not sources[source_name].TYPE == SourceType.web: # just web source support
         return {"error": "this source does not support web metadata"}
-    return {"msg": "success", "data": sources[source_name].get_metadata(id, app_state["settings"]["proxy"])}
+    return {"msg": "success", "data": sources[source_name].get_metadata(id)}
 
 @app.get("/web/{source_name}/{id}/pages")
 def get_web_doujinshi_pages(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
@@ -352,4 +352,4 @@ def get_web_doujinshi_pages(source_name: str, id: str, token: str = Depends(oaut
         return {"error": "incorrect source name"}
     if not sources[source_name].TYPE == SourceType.web: # just web source support
         return {"error": "this source does not support web pages"}
-    return {"msg": "success", "data": sources[source_name].get_pages(id, app_state["settings"]["proxy"])}
+    return {"msg": "success", "data": sources[source_name].get_pages(id)}

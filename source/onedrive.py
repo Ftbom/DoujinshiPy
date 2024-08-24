@@ -111,9 +111,7 @@ class Source:
             if item["folder"]:
                 doujinshi.extend(self.get_doujinshi(item["id"]))
             else:
-                name, ext = os.path.splitext(item["name"])
-                if ext in [".zip", ".ZIP"]:
-                    doujinshi.append((name, item["id"]))
+                doujinshi.append((item["name"], item["id"]))
         return doujinshi
     
     def get_file(self, identifier: str) -> str:
@@ -121,4 +119,4 @@ class Source:
                            headers = self.__get_headers(), proxies = self.__proxies).json()
         if "error" in res:
             raise RuntimeError(res["error"]["message"])
-        return {"url": res["@microsoft.graph.downloadUrl"], "suffix_range": False, "headers": {}, "proxy": {}}
+        return {"url": res["@microsoft.graph.downloadUrl"], "suffix_range": False, "headers": {}, "proxy": self.__proxies}

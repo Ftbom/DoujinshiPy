@@ -22,7 +22,7 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
                         os.remove(f".data/thumb/{str(result.id)}.jpg")
                     session.delete(result)
             try:
-                metadata = app_state["sources"][source_name].get_metadata(id, app_state["settings"]["proxy"])
+                metadata = app_state["sources"][source_name].get_metadata(id)
                 doujinshi = Doujinshi(title = metadata["title"], pagecount = metadata["pagecount"],
                             tags = "|".join(metadata["tags"]), identifier = metadata["id"],
                             type = SourceType.web, source = source_name)
@@ -33,8 +33,8 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
                 session.add(doujinshi) # save to database
                 logging.info(f"add {id} of {source_name} source to library")
                 time.sleep(0.5)
-            except:
-                logging.error(f"fail to add {id} of {source_name} source to library")
+            except Exception as e:
+                logging.error(f"fail to add {id} of {source_name} source to library, error message: {e}")
             client.set("add_status", f"adding to library {count}/{num}")
         session.commit()
         client.set("add_status", "finished")
@@ -73,8 +73,16 @@ def scan_to_database(app_state, name: str) -> None:
         logging.info(f"clear the old datas from the {name} library")
         doujinshi_list = clean_database_by_source_name(session, name, doujinshi_list)
         for d in doujinshi_list:
-            doujinshi = Doujinshi(title = d[0], identifier = d[1],
-                              type = source_object.TYPE, source = name)
+            file_name = d[0]
+            d_name, ext = os.path.splitext(file_name)
+            if source_object.TYPE == SourceType.cloud:
+                if not ext in [".zip", ".ZIP"]:    
+                    continue
+            elif source_object.TYPE == SourceType.local:
+                if not ext in [".zip", ".ZIP", ".7z", ".7Z", ".rar", ".RAR"]:
+                    continue
+            doujinshi = Doujinshi(title = d_name, identifier = d[1],
+                                  type = source_object.TYPE, source = name)
             session.add(doujinshi)
             logging.info(f"add {d[0]}")
         session.commit()
