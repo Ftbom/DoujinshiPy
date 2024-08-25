@@ -1,6 +1,7 @@
 import os
 import jwt
 import json
+import redis
 import importlib
 import threading
 from enum import Enum
@@ -12,7 +13,6 @@ from lib.database import *
 from pydantic import BaseModel
 from fastapi import FastAPI, Depends
 from lib.utils import get_file_infos
-from pymemcache.client.base import Client
 from sqlmodel import SQLModel, create_engine
 from starlette.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -47,25 +47,6 @@ class EditMetaData(BaseModel):
     title: str
     tag: list[str]
 
-class SearchParameter(BaseModel):
-    query: str
-    tag: list[str]
-    group: str
-    source: str
-
-class JsonSerde(object):
-    def serialize(self, key, value):
-        if isinstance(value, str):
-            return value.encode("utf-8"), 1
-        return json.dumps(value).encode("utf-8"), 2
-
-    def deserialize(self, key, value, flags):
-       if flags == 1:
-           return value.decode("utf-8")
-       if flags == 2:
-           return json.loads(value.decode("utf-8"))
-       raise Exception("Unknown serialization format")
-
 app = FastAPI()
 
 secret_key = "uzfWtX8F9bUa691ve55BFHyRh1Br6b0mRhcJWqWFynXxhuR10jE"
@@ -73,16 +54,16 @@ oauth2 = OAuth2PasswordBearer(tokenUrl = "/token")
 
 app_state = {
     "settings": load_settings(),
-    "sources": load_sources(), # load source configration from file
-    "database_engine": create_engine("sqlite:///.data/database.db"), # load database
-    "memcached_client": Client("localhost", serde=JsonSerde()) # create client
+    "sources": load_sources(), # 从配置文件读取源配置
+    "database_engine": create_engine("sqlite:///.data/database.db"), # 加载sqlite数据库
+    "redis_client": redis.Redis(decode_responses = True) # 创建redis客户端
 }
 
 SQLModel.metadata.create_all(app_state["database_engine"])
 
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
-    return {"sources": list(app_state["sources"]),
+    return {"sources": list(app_state["sources"]), # 可用源及“插件”
             "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
 
 @app.post("/token")
@@ -97,61 +78,70 @@ def get_token(input_data : OAuth2PasswordRequestForm = Depends()):
 
 @app.get("/scan")
 def get_scan_status(token: str = Depends(oauth2)) -> dict:
-    client = app_state["memcached_client"]
-    scan_status_code = client.get("scan_status_code") # get status code of the scanning process
-    scan_source_name = client.get("scan_source_name") # get source name of the scanning process
+    client = app_state["redis_client"]
+    scan_status_code = client.get("scan_status_code") # 获取扫描过程状态码
+    scan_source_name = client.get("scan_source_name") # 获取扫描对象源名称
     if scan_status_code == None:
         scan_status_code = 0
         scan_source_name = ""
+    else:
+        scan_status_code = int(scan_status_code)
+    # 状态信息
     scan_info = {0: "scanning has not started", 1: f"scanning the {scan_source_name} library, retrieving the doujinshi list...",
                  2: f"scanning the {scan_source_name} library, saving information to the database...", 3: f"the {scan_source_name} library has been scanned",
                  4: f"failed to scan the {scan_source_name} library"}
     if scan_status_code == 3 or scan_status_code == 4:
-        client.delete("scan_status_code") # reset the status code
+        client.delete("scan_status_code") # 未开始或已完成，重置信息
         client.delete("scan_source_name")
-    return {"msg": scan_info[scan_status_code]} # return scan status
+    return {"msg": scan_info[scan_status_code]} # 返回状态
 
 @app.post("/scan")
 def scan_library(scan: StartScan, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
-    if not scan.start: # start scan or not
+    if not scan.start: # 是否开始扫描
         return {"msg": ""}
-    if not scan.source_name in sources:
+    if not scan.source_name in sources: # 源名称是否正确
         return {"error": "incorrect source name"}
-    if sources[scan.source_name].TYPE == SourceType.web: # web source not support scanning
+    if sources[scan.source_name].TYPE == SourceType.web: # web源不支持扫描
         return {"msg": "this source does not support scanning"}
-    client = app_state["memcached_client"]
-    scan_status_code = client.get("scan_status_code")
-    if scan_status_code == None:
-        scan_status_code = 0
-    if scan_status_code in [1, 2]: # scanning has started
-        return {"error": f"scanning the {client.get('scan_source_name')} library, please wait and try again later"}
-    else:
-        threading.Thread(target = scan_to_database,
-                         args = (app_state, scan.source_name)).start()
-        return {"msg": f"scanning has started, get the status of scanning process: /scan"}
+    client = app_state["redis_client"]
+    with client.lock("scan_status_lock", blocking = True, blocking_timeout = 1):
+        # 加锁，防止同时发出扫描请求时，创建多个扫描线程
+        scan_status_code = client.get("scan_status_code")
+        if scan_status_code == None:
+            scan_status_code = 0
+        else:
+            scan_status_code = int(scan_status_code)
+        if scan_status_code in [1, 2]: # 扫描进行中
+            return {"error": f"scanning the {client.get('scan_source_name')} library, please wait and try again later"}
+        client.set("scan_status_code", 1) # 设置扫描已开始状态
+    threading.Thread(target = scan_to_database,
+                    args = (app_state, scan.source_name)).start()
+    return {"msg": f"scanning has started, get the status of scanning process: /scan"}
 
 @app.post("/add")
 def add_to_library(add: AddLibrary, token: str = Depends(oauth2)) -> dict:
     sources = app_state["sources"]
     if not add.source_name in sources:
         return {"error": "incorrect source name"}
-    if not sources[add.source_name].TYPE == SourceType.web: # just web source support add
+    if not sources[add.source_name].TYPE == SourceType.web: # 仅web源支持添加
         return {"msg": "this source does not support adding"}
-    client = app_state["memcached_client"]
-    add_status = client.get("add_status")
-    if add_status == None:
-        add_status = "none"
-    if (not add_status == "none") and (not add_status == "finished"):
-        return {"msg": "trying to add some doujinshi to library, please wait and try again later"}
-    else:
-        threading.Thread(target = batch_add_to_library,
-                         args = (app_state, add.target, add.source_name, add.replace)).start()
-        return {"msg": f"adding has started, get the status of adding process: /add"}
+    client = app_state["redis_client"]
+    with client.lock("add_status_lock", blocking = True, blocking_timeout = 1):
+        # 加锁，防止同时发出请求时，创建多个线程
+        add_status = client.get("add_status")
+        if add_status == None:
+            add_status = "none"
+        if (not str(add_status) == "none") and (not add_status == "finished"):
+            return {"msg": "trying to add some doujinshi to library, please wait and try again later"}
+        client.set("add_status", "started")
+    threading.Thread(target = batch_add_to_library,
+                     args = (app_state, add.target, add.source_name, add.replace)).start()
+    return {"msg": f"adding has started, get the status of adding process: /add"}
 
 @app.get("/add")
 def get_add_status(token: str = Depends(oauth2)) -> dict:
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     add_status = client.get("add_status")
     if add_status == None:
         add_status = "none"
@@ -161,19 +151,23 @@ def get_add_status(token: str = Depends(oauth2)) -> dict:
 
 @app.post("/batch")
 def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> dict:
-    client = app_state["memcached_client"]
-    # get status
-    operation_status = client.get("batch_operation")
-    if operation_status == None:
-        operation_status = "none"
-    if (not operation_status == "none") and (not operation_status == "finished"):
-        return {"msg": "some batch operations is running, please wait and try again later"}
+    client = app_state["redis_client"]
+    # 获取批量操作状态
+    with client.lock("batch_operation_lock", blocking = True, blocking_timeout = 1):
+        # 加锁，防止同时发出请求时，创建多个线程
+        operation_status = client.get("batch_operation")
+        if operation_status == None:
+            operation_status = "none"
+        if (not operation_status == "none") and (not operation_status == "finished"):
+            return {"msg": "some batch operations is running, please wait and try again later"}
+        client.set("batch_operation", "started")
     if setting.operation == OperationType.group:
         if "|" in setting.name:
             return {"error": "group name should not contain '|'"}
         threading.Thread(target = batch_set_group, args = (app_state, setting.name, setting.target, setting.replace)).start()
         return {"msg": "start setting group, get the status: /batch"}
     else:
+        # 加载并应用“插件”
         if not os.path.exists(os.path.join(setting.operation.value, f"{setting.name}.py")):
             return {"error": f"not support {setting.name} in {setting.operation.value} operation"}
         if setting.operation == OperationType.cover:
@@ -187,7 +181,7 @@ def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> di
 
 @app.get("/batch")
 def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     operation_status = client.get("batch_operation")
     if operation_status == None:
         operation_status = "none"
@@ -278,39 +272,58 @@ def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
 
 @app.get("/doujinshi/{id}/page/{num}")
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
-    client = app_state["memcached_client"]
-    read_thread = client.get(f"{id}_read")
-    if read_thread == None:
-        threading.Thread(target = read_pages, args = (app_state, id)).start()
-        time.sleep(0.2) # wait status to be set
+    client = app_state["redis_client"]
+    new_thread = False
+    with client.lock(f"{id}_read_lock", blocking = True, blocking_timeout = 5):
+        # 获取缓存线程状态，防止重复创建线程
         read_thread = client.get(f"{id}_read")
-    if read_thread == -1:
-        client.delete(f"{id}_read") # reset
+        if read_thread == None:
+            # 先设置状态，防止锁释放后其他请求创建线程
+            client.set(f"{id}_read", 0)
+            threading.Thread(target = read_pages, args = (app_state, id)).start()
+            new_thread = True
+    if new_thread or (read_thread == '0'):
+        time.sleep(0.2) # 若已创建线程，或缓存线程还未设置状态，等待并重新获取状态
+        read_thread = client.get(f"{id}_read")
+    if read_thread == '-1':
+        # client.delete(f"{id}_read") # reset
         return {"error": f"doujinshi {id} does not exist or source not enabled"}
-    # wait load status to be set
-    count = 0
-    while count < 50 and client.get(f"{id}_page") != None: # max wait for 10s
-        count = count + 1
-        time.sleep(0.2)
-    if client.get(f"{id}_page") != None:
+    # wait page load status to be set
+    try:
+        count = 0
+        while count < 20:
+            # 等待10s，若页加载状态被释放，设置页加载状态（告诉缓存线程该加载的页码）
+            num_status = client.get(f"{id}_page")
+            if num_status == None:
+                with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                   # 再获取一次状态，防止两次请求同时等待锁释放进入状态设置，并因此先后设置状态，导致头一次设置被覆盖
+                   if client.get(f"{id}_page") != None:
+                       continue
+                   client.set(f"{id}_page", num)
+                break
+            time.sleep(0.5)
+            count = count + 1
+        if count >= 20: # 超时
+            return {"error": "busy to load pages, please try later"}
+    except:
         return {"error": "busy to load pages, please try later"}
-    client.set(f"{id}_page", num)
-    # wait page to cache
     count = 0
     file_path = f".data/cache/{id}/{num}.jpg"
-    while count < 20: # max wait for 10s
+    while count < 20: # 等待10s，等待页码缓存
+        # 获取页码状态
         page_status = client.get(f"{id}_{num}")
-        if page_status == -1:
-            client.delete(f"{id}_{num}") # reset
+        if page_status == '-1':
+            client.delete(f"{id}_{num}") # 重置
             return {"error": f"doujinshi {id} not contain the {num} page"}
-        if page_status == 0:
-            client.delete(f"{id}_{num}") # reset
+        if page_status == '0':
+            client.delete(f"{id}_{num}") # 重置
             return {"error": f"fail to get page {num} of doujinshi {id}"}
-        if os.path.exists(file_path):
-            return FileResponse(file_path)
+        if os.path.exists(file_path): # 文件已存在，返回文件
+            if os.path.getsize(file_path) > 0:
+                return FileResponse(file_path)
         count = count + 1
         time.sleep(0.5)
-    return {"error": f"fail to get page {num} of doujinshi {id}"}
+    return {"error": f"fail to get page {num} of doujinshi {id}"} # 超时
 
 @app.get("/doujinshi/{id}/thumbnail")
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
@@ -319,9 +332,14 @@ def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
         return {"error": f"doujinshi {id} not exist"}
     return FileResponse(thumb_path)
 
-@app.post("/search")
-def search(parameter: SearchParameter, token: str = Depends(oauth2)) -> dict:
-    return {"msg": "success", "data": search_doujinshi(app_state["database_engine"], parameter)}
+@app.get("/search")
+def search(query: str, source_name: str = "", tag: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
+    tag_list = tag.split("$")
+    for i in range(len(tag_list)):
+        tag_list[i] = tag_list[i].strip(" ")
+    tag_list = [item for item in tag_list if item != ""]
+    return {"msg": "success", "data": search_doujinshi(app_state["database_engine"],
+                                                       (query, tag_list, group, source_name))}
 
 @app.get("/web/{source_name}/search")
 def search_web(source_name: str, query: str, page: int, token: str = Depends(oauth2)) -> dict:

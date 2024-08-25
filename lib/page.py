@@ -15,7 +15,7 @@ def zip_filelist(zip_file, sort: bool) -> list:
     filelist = zip_file.namelist()
     if sort:
         filelist.sort()
-    # get file list
+    # 获取文件列表
     for file in zip_file.infolist():
         if file.is_dir():
             filelist.remove(file.filename)
@@ -25,7 +25,7 @@ def rar_filelist(rar_file, sort: bool) -> list:
     filelist = rar_file.namelist()
     if sort:
         filelist.sort()
-    # get file list
+    # 获取文件列表
     for file in rar_file.infolist():
         if file.is_dir():
             filelist.remove(file.filename)
@@ -35,7 +35,7 @@ def sevenzip_filelist(sevenzip_file: py7zr.SevenZipFile, sort: bool) -> list:
     filelist = sevenzip_file.namelist()
     if sort:
         filelist.sort()
-    # get file list
+    # 获取文件列表
     for file in sevenzip_file.files:
         if file.is_directory:
             filelist.remove(file.filename)
@@ -76,11 +76,11 @@ def cloud_pagecount(download_info: dict) -> int:
     return len(filelist)
 
 def get_page_count(sources, session, doujinshi: Doujinshi) -> int:
-    if not doujinshi.pagecount == None:
+    if not doujinshi.pagecount == None: # 数据库已储存，直接返回
         return doujinshi.pagecount
     if doujinshi.type == SourceType.web:
         raise RuntimeError(f"fail to get page count of doujinshi {str(doujinshi.id)}")
-    # pagecount is none, get pagecount and save it
+    # 数据库未储存，读取并储存
     try:
         file_identifier = sources[doujinshi.source].get_file(doujinshi.identifier)
         if doujinshi.type == SourceType.local:
@@ -109,32 +109,35 @@ def get_page_urls(app_state, id: str) -> list[str]:
         if not result.source in app_state["sources"]:
             return []
         if (result.type == SourceType.web) and (not app_state["settings"]["proxy_webpage"]):
-            return app_state["sources"][result.source].get_pages(result.identifier) # get web url of pages
-        pagecount = get_page_count(app_state["sources"], session, result)
+            return app_state["sources"][result.source].get_pages(result.identifier) # 若未设置代理图片，获取网页源图片
+        pagecount = get_page_count(app_state["sources"], session, result) # 获取页面数目
         page_list = []
         for i in range(pagecount):
             page_list.append(f"/doujinshi/{str(result.id)}/page/{i}")
         return page_list
 
-def cache_page(client, type, id, num, arg1, arg2, is_7z = False):
+def cache_page(client, type, id, num, arg1, arg2, is_7z = False): # 缓存页码
     page_path = f".data/cache/{id}/{num}.jpg"
     if os.path.exists(page_path):
         return
     try:
+        # 创建空文件占位，防止同时缓存相同页面
+        os.makedirs(f".data/cache/{id}", exist_ok = True)
+        with open(page_path, "wb") as f:
+            f.write(b"")
         if type == SourceType.web:
-            page_bytes = requests.get(arg1["urls"][num], proxies = arg2, headers = arg1["headers"]).content # get url content
+            page_bytes = requests.get(arg1["urls"][num], proxies = arg2, headers = arg1["headers"]).content # 获取链接内容
         elif type == SourceType.cloud:
-            page_io = arg1.open(arg2[num]) # get remote zip file
+            page_io = arg1.open(arg2[num]) # 读取远程zip
             page_bytes = page_io.read()
             page_io.close()
         elif type == SourceType.local:
             if not is_7z:
-                page_io = arg1.open(arg2[num]) # get zip file
+                page_io = arg1.open(arg2[num]) # 读取zip或rar
             else:
-                page_io = arg1.read([arg2[num]])[arg2[num]] # get 7z file
+                page_io = arg1.read([arg2[num]])[arg2[num]] # 读取7z
             page_bytes = page_io.read()
             page_io.close()
-        os.makedirs(f".data/cache/{id}", exist_ok = True)
         with open(page_path, "wb") as f:
             f.write(page_bytes)
     except Exception as e:
@@ -143,7 +146,7 @@ def cache_page(client, type, id, num, arg1, arg2, is_7z = False):
 
 def web_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     try:
         page_urls = sources[doujinshi.source].get_pages(doujinshi.identifier)
     except Exception as e:
@@ -153,28 +156,27 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
     id = str(doujinshi.id)
     count = 0
     while count < 3000:
-        count = count + 1
-        try:
-            num = client.get(f"{id}_page")
-        except:
-            # in case of get value while setting
-            time.sleep(0.1)
-            num = client.get(f"{id}_page")
-        if num != None:
-            if num >= pagecount or num < 0:
-                client.set(f"{id}_{num}", -1)
-                client.delete(f"{id}_page")
-                continue
-            # use new thread to cache page
-            threading.Thread(target = cache_page, args = (client, SourceType.web, id,
-                                    num, page_urls, app_state["settings"]["proxy"])).start()
-            client.delete(f"{id}_page")
-            count = 0
         time.sleep(0.1)
+        count = count + 1
+        num_status = client.get(f"{id}_page")
+        if num_status == None:
+            continue
+        try:
+            with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                num = int(num_status)
+                client.delete(f"{id}_page")
+                if num >= pagecount or num < 0:
+                    client.set(f"{id}_{num}", -1)
+                    continue
+                threading.Thread(target = cache_page, args = (client, SourceType.web, id,
+                                    num, page_urls, app_state["settings"]["proxy"])).start()
+                count = 0
+        except:
+            pass
 
 def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     try:
         download_info = sources[doujinshi.source].get_file(doujinshi.identifier)
         zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
@@ -187,22 +189,23 @@ def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
     id = str(doujinshi.id)
     count = 0
     while count < 3000:
-        count = count + 1
-        try:
-            num = client.get(f"{id}_page")
-        except:
-            time.sleep(0.1)
-            num = client.get(f"{id}_page")
-        if num != None:
-            if num >= pagecount or num < 0:
-                client.set(f"{id}_{num}", -1)
-                client.delete(f"{id}_page")
-                continue
-            threading.Thread(target = cache_page, args = (client, SourceType.cloud, id,
-                                    num, zip_file, filelist)).start()
-            client.delete(f"{id}_page")
-            count = 0
         time.sleep(0.1)
+        count = count + 1
+        num_status = client.get(f"{id}_page")
+        if num_status == None:
+            continue
+        try:
+            with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                num = int(num_status)
+                client.delete(f"{id}_page")
+                if num >= pagecount or num < 0:
+                    client.set(f"{id}_{num}", -1)
+                    continue
+                threading.Thread(target = cache_page, args = (client, SourceType.cloud, id,
+                                    num, zip_file, filelist)).start()
+                count = 0
+        except:
+            pass
     zip_file.close()
 
 def zip_page_read(file_path: str, client, id) -> None:
@@ -211,22 +214,23 @@ def zip_page_read(file_path: str, client, id) -> None:
     pagecount = len(filelist)
     count = 0
     while count < 3000:
-        count = count + 1
-        try:
-            num = client.get(f"{id}_page")
-        except:
-            time.sleep(0.1)
-            num = client.get(f"{id}_page")
-        if num != None:
-            if num >= pagecount or num < 0:
-                client.set(f"{id}_{num}", -1)
-                client.delete(f"{id}_page")
-                continue
-            threading.Thread(target = cache_page, args = (client, SourceType.local, id,
-                                    num, zip_file, filelist)).start()
-            client.delete(f"{id}_page")
-            count = 0
         time.sleep(0.1)
+        count = count + 1
+        num_status = client.get(f"{id}_page")
+        if num_status == None:
+            continue
+        try:
+            with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                num = int(num_status)
+                client.delete(f"{id}_page")
+                if num >= pagecount or num < 0:
+                    client.set(f"{id}_{num}", -1)
+                    continue
+                threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                                    num, zip_file, filelist)).start()
+                count = 0
+        except:
+            pass
     zip_file.close()
 
 def rar_page_read(file_path: str, client, id) -> None:
@@ -234,23 +238,24 @@ def rar_page_read(file_path: str, client, id) -> None:
     filelist = rar_filelist(rar_file, True)
     pagecount = len(filelist)
     count = 0
-    while count < 300:
-        count = count + 1
-        try:
-            num = client.get(f"{id}_page")
-        except:
-            time.sleep(0.1)
-            num = client.get(f"{id}_page")
-        if num != None:
-            if num >= pagecount or num < 0:
-                client.set(f"{id}_{num}", -1)
-                client.delete(f"{id}_page")
-                continue
-            threading.Thread(target = cache_page, args = (client, SourceType.local, id,
-                                    num, rar_file, filelist)).start()
-            client.delete(f"{id}_page")
-            count = 0
+    while count < 3000:
         time.sleep(0.1)
+        count = count + 1
+        num_status = client.get(f"{id}_page")
+        if num_status == None:
+            continue
+        try:
+            with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                num = int(num_status)
+                client.delete(f"{id}_page")
+                if num >= pagecount or num < 0:
+                    client.set(f"{id}_{num}", -1)
+                    continue
+                threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                                    num, rar_file, filelist)).start()
+                count = 0
+        except:
+            pass
     rar_file.close()
 
 def sevenzip_page_read(file_path: str, client, id) -> None:
@@ -258,31 +263,36 @@ def sevenzip_page_read(file_path: str, client, id) -> None:
     filelist = sevenzip_filelist(sevenzip_file, True)
     pagecount = len(filelist)
     count = 0
-    while count < 3000:
-        count = count + 1
-        try:
-            num = client.get(f"{id}_page")
-        except:
-            time.sleep(0.1)
-            num = client.get(f"{id}_page")
-        if num != None:
-            if num >= pagecount or num < 0:
-                client.set(f"{id}_{num}", -1)
-                client.delete(f"{id}_page")
-                continue
-            threading.Thread(target = cache_page, args = (client, SourceType.local, id,
-                                    num, sevenzip_file, filelist, True)).start()
-            client.delete(f"{id}_page")
-            count = 0
+    while count < 3000: # 无请求后等待5min自动退出
         time.sleep(0.1)
-    sevenzip_file.close()
+        count = count + 1
+        # 获取页加载状态，若有信息，读取并加载对应页
+        num_status = client.get(f"{id}_page")
+        if num_status == None:
+            continue
+        try:
+            with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                # 加锁，防止此时页加载状态被设置，导致信息丢失
+                num = int(num_status)
+                client.delete(f"{id}_page") # 重置状态
+                if num >= pagecount or num < 0:
+                    client.set(f"{id}_{num}", -1) # 页码状态
+                    continue
+                # 开启页码缓存线程
+                threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                                        num, sevenzip_file, filelist, True)).start()
+                count = 0
+        except:
+            pass
+    sevenzip_file.close() # 关闭文件
 
 def local_page_read(app_state, doujinshi: Doujinshi) -> None:
     sources = app_state["sources"]
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     try:
         file_path = sources[doujinshi.source].get_file(doujinshi.identifier)
         name, ext = os.path.splitext(file_path)
+        # 根据文件类型，分配缓存函数
         if ext in [".zip", ".ZIP"]:
             zip_page_read(file_path, client, str(doujinshi.id))
         elif ext in [".7z", ".7Z"]:
@@ -293,14 +303,14 @@ def local_page_read(app_state, doujinshi: Doujinshi) -> None:
         logging.error(f"fail to read doujinshi {str(doujinshi.id)}, error message: {e}")
 
 def read_pages(app_state, id: str) -> None:
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     engine = app_state["database_engine"]
     sources = app_state["sources"]
     with Session(engine) as session:
         try:
             uid = uuid.UUID(id)
         except:
-            # set error status and exit
+            # 设置缓存状态，id不存在
             client.set(f"{id}_read", -1)
             return
         result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
@@ -311,11 +321,11 @@ def read_pages(app_state, id: str) -> None:
             client.set(f"{id}_read", -1)
             return
         client.set(f"{id}_read", 1)
-        # start read page
+        # 开始缓存页面
         if result.type == SourceType.web:
             web_page_read(app_state, result)
         elif result.type == SourceType.cloud:
             cloud_page_read(app_state, result)
         elif result.type == SourceType.local:
             local_page_read(app_state, result)
-        client.delete(f"{id}_read")
+        client.delete(f"{id}_read") # 缓存结束，重置缓存状态

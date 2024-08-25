@@ -69,4 +69,3 @@ class Source:
     def get_file(self, file_id: str) -> str:
         res = self.__do_request("getfilelink", fileid = int(file_id))
         return {"url": f"https://" + res["hosts"][0] + res["path"], "suffix_range": True, "headers": {}, "proxy": self.__proxies}
-        pass

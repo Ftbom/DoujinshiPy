@@ -12,7 +12,7 @@ class SourceType(Enum):
     web = 2
 
 class Doujinshi(SQLModel, table = True):
-    id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # generate id
+    id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # 自动生成id
     title: str
     pagecount: Union[int, None] = None
     tags: str = ''
@@ -22,7 +22,7 @@ class Doujinshi(SQLModel, table = True):
     source: str
 
 class Group(SQLModel, table = True):
-    id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # generate id
+    id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # 自动生成id
     name: str
 
 def get_metadata(doujinshi: Doujinshi) -> dict:
@@ -40,7 +40,7 @@ def get_doujinshi_list(engine, random_num) -> dict:
         results = session.exec(select(Doujinshi))
         for result in results:
             doujinshi.append(get_metadata(result))
-        if random_num != None: # random
+        if random_num != None: # 随机
             return random.sample(doujinshi, min(len(doujinshi), random_num))
         return doujinshi
 
@@ -82,34 +82,34 @@ def get_thumb_by_id(engine, id: str):
             return "cover/nothumb.png"
         return thumb_path
 
-def search_doujinshi(engine, parameter) -> dict:
+def search_doujinshi(engine, parameters) -> dict:
     doujinshi = []
     with Session(engine) as session:
-        results = session.exec(select(Doujinshi).where(Doujinshi.title.like(f"%{parameter.query}%")))
-        for result in results: # apply tag filter
-            if len(parameter.tag) != 0:
+        results = session.exec(select(Doujinshi).where(Doujinshi.title.like(f"%{parameters[0]}%")))
+        for result in results: # 应用tag筛选
+            if len(parameters[1]) != 0:
                 r_tags = result.tags.split("|")
                 try:
                     r_tags.remove("")
                 except:
                     pass
                 skip = False
-                for i in parameter.tag:
+                for i in parameters[1]:
                     if not i in r_tags:
                         skip = True
                         break
                 if skip:
                     continue
-            if len(parameter.group) != 0: # apply group filter
+            if len(parameters[2]) != 0: # 应用group筛选
                 r_groups = result.groups.split("|")
                 try:
                     r_groups.remove("")
                 except:
                     pass
-                if not parameter.group in r_groups:
+                if not parameters[2] in r_groups:
                     continue
-            if len(parameter.source) != 0: # apply source filter
-                if parameter.source != result.source:
+            if len(parameters[3]) != 0: # 应用源筛选
+                if parameters[3] != result.source:
                     continue
             doujinshi.append(get_metadata(result))
         return doujinshi
@@ -150,7 +150,7 @@ def get_doujinshi_by_group(engine, id: str) -> dict:
         results = session.exec(select(Doujinshi).where(Doujinshi.groups.like(f"%{str(uid)}%")))
         items = []
         for r in results:
-            items.append(get_metadata(r)) # get metadata
+            items.append(get_metadata(r)) # 获取metadata
         return {"name": result.name, "doujinshis": items}
 
 def rename_group_by_id(engine, id: str, name: str) -> int:
@@ -163,7 +163,7 @@ def rename_group_by_id(engine, id: str, name: str) -> int:
         if result == None:
             return -1
         if session.exec(select(Group).where(Group.name == name)).first() != None:
-            return 0 # already exist the same name
+            return 0 # 同名group已存在
         result.name = name
         session.add(result)
         logging.info(f"rename group {result.name} to {name}")
@@ -172,7 +172,7 @@ def rename_group_by_id(engine, id: str, name: str) -> int:
 
 def delete_group_by_id(engine, id: str) -> bool:
     with Session(engine) as session:
-        # delete group
+        # 删除group
         try:
             uid = uuid.UUID(id)
         except:
@@ -182,7 +182,7 @@ def delete_group_by_id(engine, id: str) -> bool:
             return False
         session.delete(result)
         logging.info(f"delete {result.name} from group table")
-        # change group field of doujinshi
+        # 更改doujinshi组设置
         uid_str = str(uid)
         results = session.exec(select(Doujinshi).where(Doujinshi.groups.like(f"%{uid_str}%")))
         for r in results:

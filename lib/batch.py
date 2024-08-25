@@ -5,12 +5,12 @@ from sqlmodel import Session, select
 from lib.database import Doujinshi, Group
 
 def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old: bool) -> None:
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     num = len(id_list)
     with Session(app_state["database_engine"]) as session:
         group_statement = select(Group).where(Group.name == group_name)
         group_result = session.exec(group_statement).first()
-        if group_result == None: # if set new group name, add new group
+        if group_result == None: # 新的group名称，新建group
             group_result = Group(name = group_name)
             session.add(group_result)
         count = 0
@@ -24,7 +24,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
             if result == None:
                 logging.warning(f"don't find id {id}, skip setting group")
             else:
-                if replace_old: # replace old group
+                if replace_old: # 是否完全覆盖旧group
                     group_str = str(group_result.id)
                 else:
                     group_list = result.groups.split("|")
@@ -43,7 +43,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
         client.set("batch_operation", "finished")
 
 def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> None:
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     num = len(id_list)
     with Session(app_state["database_engine"]) as session:
         count = 0
@@ -55,7 +55,7 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                     if os.path.exists(f".data/thumb/{str(target_id)}.jpg"):
                         client.set("batch_operation", f"getting cover {count}/{num}")
                         continue
-                # get data
+                # 获取信息
                 statement = select(Doujinshi).where(Doujinshi.id == target_id)
                 result = session.exec(statement).first()
             except:
@@ -64,7 +64,7 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 logging.warning(f"don't find id {id}, skip getting cover")
             else:
                 try:
-                    func(app_state, result) # run function to get cover
+                    func(app_state, result) # 获取封面的函数
                     logging.info(f"get cover {id}.jpg")
                 except Exception as e:
                     logging.error(f"failed to get cover {id}.jpg, error message: {e}")
@@ -72,13 +72,12 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
         client.set("batch_operation", "finished")
 
 def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> None:
-    client = app_state["memcached_client"]
+    client = app_state["redis_client"]
     num = len(id_list)
     with Session(app_state["database_engine"]) as session:
         count = 0
         for id in id_list:
             count = count + 1
-            # get data
             try:
                 statement = select(Doujinshi).where(Doujinshi.id == uuid.UUID(id))
                 result = session.exec(statement).first()
@@ -88,7 +87,7 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
                 logging.warning(f"don't find id {id}, skip getting tag")
             else:
                 try:
-                    new_tags = func(app_state, result) # run function to get tag
+                    new_tags = func(app_state, result) # 获取tag的函数
                     if replace_old and new_tags != []:
                         tags = new_tags
                     else:

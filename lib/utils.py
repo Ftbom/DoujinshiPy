@@ -14,7 +14,7 @@ def load_settings() -> dict:
 
 def load_sources() -> dict:
     sources = {}
-    # read configuration from file
+    # 读取配置
     with open(".data/config.json", "r", encoding = "utf-8") as f:
         source_config = json.loads(f.read())["source"]
     for key in source_config.keys():

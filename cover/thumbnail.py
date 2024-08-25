@@ -73,7 +73,7 @@ def cloud_thumbnail(download_info: dict, id: str) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with zip_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
+        generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
     zip_file.close()
     time.sleep(0.5)
 
