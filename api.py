@@ -287,7 +287,11 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
     if read_thread == '-1':
         # client.delete(f"{id}_read") # reset
         return {"error": f"doujinshi {id} does not exist or source not enabled"}
-    # wait page load status to be set
+    # 文件已存在则无需后续操作
+    file_path = f".data/cache/{id}/{num}.jpg"
+    if os.path.exists(file_path): # 文件已存在，返回文件
+        if os.path.getsize(file_path) > 0:
+            return FileResponse(file_path)
     try:
         count = 0
         while count < 20:
@@ -307,7 +311,6 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
     except:
         return {"error": "busy to load pages, please try later"}
     count = 0
-    file_path = f".data/cache/{id}/{num}.jpg"
     while count < 20: # 等待10s，等待页码缓存
         # 获取页码状态
         page_status = client.get(f"{id}_{num}")

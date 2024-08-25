@@ -6,7 +6,6 @@ import rarfile
 import zipfile
 import logging
 import requests
-import threading
 import remotezip
 from sqlmodel import Session, select
 from lib.database import Doujinshi, SourceType
@@ -141,6 +140,10 @@ def cache_page(client, type, id, num, arg1, arg2, is_7z = False): # 缓存页码
         with open(page_path, "wb") as f:
             f.write(page_bytes)
     except Exception as e:
+        try:
+            os.remove(page_path)
+        except:
+            pass
         client.set(f"{id}_{num}", 0)
         logging.error(f"fail to get page {num} of doujinshi {id}, error message: {e}")
 
@@ -168,8 +171,11 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
                 if num >= pagecount or num < 0:
                     client.set(f"{id}_{num}", -1)
                     continue
-                threading.Thread(target = cache_page, args = (client, SourceType.web, id,
-                                    num, page_urls, app_state["settings"]["proxy"])).start()
+                # threading.Thread(target = cache_page, args = (client, SourceType.web, id,
+                #                     num, page_urls, app_state["settings"]["proxy"])).start()
+                # 若使用多线程同时缓存不同页面，极易造成远程服务器限制或远程zip解压失败
+                # 不使用则速度较慢
+                cache_page(client, SourceType.web, id, num, page_urls, app_state["settings"]["proxy"])
                 count = 0
         except:
             pass
@@ -201,8 +207,9 @@ def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
                 if num >= pagecount or num < 0:
                     client.set(f"{id}_{num}", -1)
                     continue
-                threading.Thread(target = cache_page, args = (client, SourceType.cloud, id,
-                                    num, zip_file, filelist)).start()
+                # threading.Thread(target = cache_page, args = (client, SourceType.cloud, id,
+                #                     num, zip_file, filelist)).start()
+                cache_page(client, SourceType.cloud, id, num, zip_file, filelist)
                 count = 0
         except:
             pass
@@ -226,8 +233,9 @@ def zip_page_read(file_path: str, client, id) -> None:
                 if num >= pagecount or num < 0:
                     client.set(f"{id}_{num}", -1)
                     continue
-                threading.Thread(target = cache_page, args = (client, SourceType.local, id,
-                                    num, zip_file, filelist)).start()
+                # threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                #                     num, zip_file, filelist)).start()
+                cache_page(client, SourceType.local, id, num, zip_file, filelist)
                 count = 0
         except:
             pass
@@ -251,8 +259,9 @@ def rar_page_read(file_path: str, client, id) -> None:
                 if num >= pagecount or num < 0:
                     client.set(f"{id}_{num}", -1)
                     continue
-                threading.Thread(target = cache_page, args = (client, SourceType.local, id,
-                                    num, rar_file, filelist)).start()
+                # threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                #                     num, rar_file, filelist)).start()
+                cache_page(client, SourceType.local, id, num, rar_file, filelist)
                 count = 0
         except:
             pass
@@ -279,8 +288,9 @@ def sevenzip_page_read(file_path: str, client, id) -> None:
                     client.set(f"{id}_{num}", -1) # 页码状态
                     continue
                 # 开启页码缓存线程
-                threading.Thread(target = cache_page, args = (client, SourceType.local, id,
-                                        num, sevenzip_file, filelist, True)).start()
+                # threading.Thread(target = cache_page, args = (client, SourceType.local, id,
+                #                         num, sevenzip_file, filelist, True)).start()
+                cache_page(client, SourceType.local, id, num, sevenzip_file, filelist, True)
                 count = 0
         except:
             pass
