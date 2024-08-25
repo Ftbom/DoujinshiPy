@@ -1,6 +1,5 @@
 import os
 import jwt
-import json
 import redis
 import importlib
 import threading
