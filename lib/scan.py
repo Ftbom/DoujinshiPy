@@ -42,8 +42,8 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
 
 def clean_database_by_source_name(session: Session, name: str, doujinshi_list: list) -> list:
     for i in range(len(doujinshi_list)):
-        f_name, ext = os.path.splitext(doujinshi_list[i][0])
-        doujinshi_list[i] = (f_name, doujinshi_list[i][1])
+        f_name, ext = os.path.splitext(str(doujinshi_list[i][0]))
+        doujinshi_list[i] = (f_name, str(doujinshi_list[i][1]))
     statement = select(Doujinshi).where(Doujinshi.source == name)
     results = session.exec(statement)
     for result in results:
@@ -76,7 +76,7 @@ def scan_to_database(app_state, name: str) -> None:
     with Session(app_state["database_engine"]) as session:
         logging.info(f"clear the old datas from the {name} library")
         for doujinshi_info in doujinshi_list:
-            _name, ext = os.path.splitext(doujinshi_info[0])
+            _name, ext = os.path.splitext(str(doujinshi_info[0]))
             if source_object.TYPE == SourceType.cloud:
                 if not ext in [".zip", ".ZIP"]: # 筛选文件类型
                     doujinshi_list.remove(doujinshi_info)
