@@ -1,5 +1,4 @@
 import os
-import jwt
 import redis
 import importlib
 import threading
@@ -10,11 +9,11 @@ from lib.utils import *
 from lib.batch import *
 from lib.database import *
 from pydantic import BaseModel
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, HTTPException, Depends, status
 from lib.utils import get_file_infos
 from sqlmodel import SQLModel, create_engine
 from starlette.responses import FileResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 
 class PasswdAuth(BaseModel):
     passwd: str
@@ -48,8 +47,7 @@ class EditMetaData(BaseModel):
 
 app = FastAPI()
 
-secret_key = "uzfWtX8F9bUa691ve55BFHyRh1Br6b0mRhcJWqWFynXxhuR10jE"
-oauth2 = OAuth2PasswordBearer(tokenUrl = "/token")
+oauth2 = OAuth2PasswordBearer(tokenUrl = "token")
 
 app_state = {
     "settings": load_settings(),
@@ -60,23 +58,25 @@ app_state = {
 
 SQLModel.metadata.create_all(app_state["database_engine"])
 
+# 自定义 token 验证函数
+def verify_token(token: str):
+    if token != app_state["settings"]["passwd"]:
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail = "Invalid token",
+            headers = {"WWW-Authenticate": "Bearer"},
+        )
+    return token
+
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     return {"sources": list(app_state["sources"]), # 可用源及“插件”
             "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
 
-@app.post("/token")
-def get_token(input_data : OAuth2PasswordRequestForm = Depends()):
-    user_str = app_state["settings"]["auth"]["user"]
-    passwd_str = app_state["settings"]["auth"]["passwd"]
-    if (input_data.username == user_str) and (input_data.password == passwd_str):
-        return {"access_token": jwt.encode({"user": f"{user_str}_{passwd_str}"}, secret_key, algorithm = "HS256"),
-                "token_type": "bearer"}
-    else:
-        return {"error": "wrong username or password"}
-
 @app.get("/scan")
 def get_scan_status(token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     client = app_state["redis_client"]
     scan_status_code = client.get("scan_status_code") # 获取扫描过程状态码
     scan_source_name = client.get("scan_source_name") # 获取扫描对象源名称
@@ -96,6 +96,7 @@ def get_scan_status(token: str = Depends(oauth2)) -> dict:
 
 @app.post("/scan")
 def scan_library(scan: StartScan, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     sources = app_state["sources"]
     if not scan.start: # 是否开始扫描
         return {"msg": ""}
@@ -120,6 +121,7 @@ def scan_library(scan: StartScan, token: str = Depends(oauth2)) -> dict:
 
 @app.post("/add")
 def add_to_library(add: AddLibrary, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     sources = app_state["sources"]
     if not add.source_name in sources:
         return {"error": "incorrect source name"}
@@ -140,6 +142,7 @@ def add_to_library(add: AddLibrary, token: str = Depends(oauth2)) -> dict:
 
 @app.get("/add")
 def get_add_status(token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     client = app_state["redis_client"]
     add_status = client.get("add_status")
     if add_status == None:
@@ -150,6 +153,7 @@ def get_add_status(token: str = Depends(oauth2)) -> dict:
 
 @app.post("/batch")
 def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     client = app_state["redis_client"]
     # 获取批量操作状态
     with client.lock("batch_operation_lock", blocking = True, blocking_timeout = 1):
@@ -180,6 +184,7 @@ def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> di
 
 @app.get("/batch")
 def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     client = app_state["redis_client"]
     operation_status = client.get("batch_operation")
     if operation_status == None:
@@ -190,10 +195,12 @@ def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
 
 @app.get("/group")
 def get_all_groups(token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     return {"msg": "success", "data": get_group_list(app_state["database_engine"])}
 
 @app.get("/group/{id}")
 def get_doujinshi_by_group_id(id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         result = get_doujinshi_by_group(app_state["database_engine"], id)
         if result == {}:
@@ -204,6 +211,7 @@ def get_doujinshi_by_group_id(id: str, token: str = Depends(oauth2)) -> dict:
 
 @app.delete("/group/{id}")
 def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         if delete_group_by_id(app_state["database_engine"], id):
             return {"msg": f"success to delete group {id}"}
@@ -214,6 +222,7 @@ def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
 
 @app.put("/group/{id}")
 def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         res = rename_group_by_id(app_state["database_engine"], id, group_name.name)
         if res == 1:
@@ -227,10 +236,12 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
 
 @app.get("/doujinshi")
 def get_all_doujinshis(random: Union[int, None] = None, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     return {"msg": "success", "data": get_doujinshi_list(app_state["database_engine"], random)}
 
 @app.get("/doujinshi/{id}/metadata")
 def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         result = get_doujinshi_by_id(app_state["database_engine"], id)
         if result == {}:
@@ -241,6 +252,7 @@ def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
 
 @app.put("/doujinshi/{id}/metadata")
 def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         if set_metadata(app_state["database_engine"], id, edit):
             return {"msg": f"success to set metadata of doujinshi {id}"}
@@ -251,6 +263,7 @@ def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oau
 
 @app.delete("/doujinshi/{id}/metadata")
 def delete_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         if delete_metadata(app_state["database_engine"], id):
             return {"msg": f"success to delete metadata of doujinshi {id}"}
@@ -261,6 +274,7 @@ def delete_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
 
 @app.get("/doujinshi/{id}/pages")
 def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     try:
         result = get_page_urls(app_state, id)
         if result == []:
@@ -271,6 +285,7 @@ def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
 
 @app.get("/doujinshi/{id}/page/{num}")
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
+    verify_token(token)
     client = app_state["redis_client"]
     new_thread = False
     with client.lock(f"{id}_read_lock", blocking = True, blocking_timeout = 5):
@@ -329,6 +344,7 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
 
 @app.get("/doujinshi/{id}/thumbnail")
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
+    verify_token(token)
     thumb_path = get_thumb_by_id(app_state["database_engine"], id)
     if thumb_path == None:
         return {"error": f"doujinshi {id} not exist"}
@@ -336,6 +352,7 @@ def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
 
 @app.get("/search")
 def search(query: str, source_name: str = "", tag: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     tag_list = tag.split("$")
     for i in range(len(tag_list)):
         tag_list[i] = tag_list[i].strip(" ")
@@ -345,6 +362,7 @@ def search(query: str, source_name: str = "", tag: str = "", group: str = "", to
 
 @app.get("/web/{source_name}/search")
 def search_web(source_name: str, query: str, page: int, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     sources = app_state["sources"]
     if not source_name in sources:
         return {"error": "incorrect source name"}
@@ -358,6 +376,7 @@ def search_web(source_name: str, query: str, page: int, token: str = Depends(oau
 
 @app.get("/web/{source_name}/{id}/metadata")
 def get_web_doujinshi(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     sources = app_state["sources"]
     if not source_name in sources:
         return {"error": "incorrect source name"}
@@ -367,6 +386,7 @@ def get_web_doujinshi(source_name: str, id: str, token: str = Depends(oauth2)) -
 
 @app.get("/web/{source_name}/{id}/pages")
 def get_web_doujinshi_pages(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
     sources = app_state["sources"]
     if not source_name in sources:
         return {"error": "incorrect source name"}

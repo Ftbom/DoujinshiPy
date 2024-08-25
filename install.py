@@ -19,10 +19,7 @@ with open(".data/config.json", "w", encoding = "utf-8") as f:
             "port": 9000,
             "proxy": "",
             "proxy_webpage": False,
-            "auth": {
-                "user": "demo",
-                "passwd": "demo"
-            }
+            "passwd": "demo"
         },
         "source": {
             "Local": {
