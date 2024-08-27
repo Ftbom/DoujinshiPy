@@ -5,8 +5,9 @@ from lib.database import SourceType
 
 class Source:
     TYPE = SourceType.web
-    SLEEP = 1.5
+    SLEEP = 0.8
 
+    # 使用简单的User-Agent模拟浏览器即可很大程度上防止IP被禁
     def __init__(self, config) -> None:
         self.__session = requests.Session()
         if not config["proxy"] == "":
@@ -79,6 +80,10 @@ class Source:
         return result
 
     def get_img_url(self, url: str) -> dict:
+        # 亦可通过api获取图片，通过api也需要图片页面的url
+        # 首次通过api获取图片时，先要从html中获取showKey（每天更新，每个画廊不同）
+        # api其他参数均来自图片页面url
+        # {"method": "showpage","gid": 618395,"page": 1,"imgkey": "1463dfbc16","showkey": "387132-43f9269494"}
         self.__is_banned()
         res = self.__session.get(url, headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         self.__error_handle(res)
