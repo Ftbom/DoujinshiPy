@@ -33,9 +33,9 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
                     f.write(res.content)
                 session.add(doujinshi) # 保存到数据库
                 logging.info(f"add {id} of {source_name} source to library")
-                time.sleep(0.5)
             except Exception as e:
                 logging.error(f"fail to add {id} of {source_name} source to library, error message: {e}")
+            time.sleep(app_state["sources"][source_name].SLEEP)
             client.set("add_status", f"adding to library {count}/{num}")
         session.commit()
         client.set("add_status", "finished")

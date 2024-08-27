@@ -19,6 +19,91 @@ python install.py
 * web
   >网站内容
 
+## 开发
+
+### cover
+
+```python
+def get_cover(app_state, doujinshi: Doujinshi) -> None:
+  with open(f".data/thumb/{doujinshi.id}.jpg", "wb") as f:
+    f.write(res)
+```
+>注意对一些网站需要适当sleep，防止网站封禁IP
+
+### tag
+
+```python
+def get_tag(app_state, doujinshi: Doujinshi) -> list[str]:
+  return tags
+```
+>注意对一些网站需要适当sleep，防止网站封禁IP
+
+### 源
+
+cloud源
+
+```python
+class Source:
+  TYPE = SourceType.cloud
+  SLEEP = 0.1 # 适当sleep，防止IP被封禁
+
+  def __init__(self, config) -> None:
+    pass
+
+  def get_doujinshi(self) -> list[tuple[str]]:
+    return doujinshi # [(文件名, 文件唯一ID)]
+    
+  def get_file(self, identifier: str) -> str:
+    return {"url": "", "suffix_range": True, "headers": {}, "proxy": {}}
+```
+
+web源
+
+可一次爬取所有图片：
+
+```python
+class Source:
+  TYPE = SourceType.web
+  SLEEP = 0.5
+
+  def __init__(self, config) -> None:
+    pass
+
+  def search(self, query: str, page: int) -> list: # 可不定义
+    return [{"id": "", "title": "", "thumb": {"url": "", "headers": {}}}]
+
+  def get_metadata(self, id: str) -> dict:
+    return {"id": "", "title": "", "pagecount": "", "tags": [], "cover": {"url": "", "headers": {}}}
+
+  def get_pages(self, id: str) -> dict:
+    return {"urls": [], "headers": {}}
+```
+
+需逐页爬取图片：
+
+```python
+class Source:
+  TYPE = SourceType.web
+  SLEEP = 1.5
+
+  def __init__(self, config) -> None:
+    pass
+            
+  def get_metadata(self, id: str) -> dict:
+    return {"id": "", "title": "", "pagecount": "", "tags": [], "cover": {"url": "", "headers": {}}}
+
+  def get_pages(self, ids: str) -> dict:
+    # return []
+    return {}
+    
+  def get_page_urls(self, ids: str, page: int) -> dict:
+    # page从0开始
+    return result # {page_num: url}(int: str)，可包含一页或多页
+
+  def get_img_url(self, url: str) -> dict:
+    return {"url": "", "headers": {}}
+```
+
 ## 源配置
 
 ### onedrive
@@ -47,10 +132,18 @@ python install.py
 "name": {"type": "local", config: {"path": ""}}
 ```
 
-## wnacg
+### wnacg
 
 网站
 
 ```
 "name": {"type": "wnacg", config: {"proxy": ""}}
+```
+
+### hentai
+
+网站
+
+```
+"name": {"type": "wnacg", config: {"proxy": "", "exhentai": False, "cookies": {}}}
 ```

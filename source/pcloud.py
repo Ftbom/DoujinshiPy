@@ -5,6 +5,7 @@ from lib.database import SourceType
 
 class Source:
     TYPE = SourceType.cloud
+    SLEEP = 0.1
 
     def __init__(self, config) -> None:
         self.__username = config["username"].lower().encode("utf-8")

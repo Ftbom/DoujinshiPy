@@ -309,8 +309,8 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
             return FileResponse(file_path)
     try:
         count = 0
-        while count < 20:
-            # 等待10s，若页加载状态被释放，设置页加载状态（告诉缓存线程该加载的页码）
+        while count < 40:
+            # 等待20s，若页加载状态被释放，设置页加载状态（告诉缓存线程该加载的页码）
             num_status = client.get(f"{id}_page")
             if num_status == None:
                 with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):

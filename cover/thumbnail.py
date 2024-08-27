@@ -64,7 +64,7 @@ def local_thumbnail(file_path: str, id: str) -> None:
     elif ext in [".rar", ".RAR"]:
         rar_thumbnail(file_path, id)
 
-def cloud_thumbnail(download_info: dict, id: str) -> None:
+def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
     zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
                             support_suffix_range = download_info["suffix_range"], proxies = download_info["proxy"])
     filelist = zip_file.namelist()
@@ -75,7 +75,7 @@ def cloud_thumbnail(download_info: dict, id: str) -> None:
     with zip_file.open(filelist[0]) as image_bytes:
         generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
     zip_file.close()
-    time.sleep(0.5)
+    time.sleep(sleep_time)
 
 def get_cover(app_state, doujinshi: Doujinshi) -> None:
     if doujinshi.type == SourceType.web:
@@ -88,4 +88,4 @@ def get_cover(app_state, doujinshi: Doujinshi) -> None:
     if doujinshi.type == SourceType.local:
         local_thumbnail(file_identifier, doujinshi.id)
     elif doujinshi.type == SourceType.cloud:
-        cloud_thumbnail(file_identifier, doujinshi.id)
+        cloud_thumbnail(file_identifier, doujinshi.id, sources[doujinshi.source].SLEEP)

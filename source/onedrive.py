@@ -7,6 +7,7 @@ from msal import ConfidentialClientApplication
 
 class Source:
     TYPE = SourceType.cloud
+    SLEEP = 0.1
 
     def __init__(self, config) -> None:
         self.__client_id = config["id"]

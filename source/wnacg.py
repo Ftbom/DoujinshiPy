@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 
 class Source:
     TYPE = SourceType.web
+    SLEEP = 0.5
 
     def __init__(self, config) -> None:
         if not config["proxy"] == "":
@@ -11,7 +12,6 @@ class Source:
         else:
             self.__proxies = {}
         self.__base_url = "https://www.wnacg.com"
-        pass
 
     def search(self, query: str, page: int) -> list:
         results = []

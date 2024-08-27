@@ -9,7 +9,10 @@ def app_init() -> None:
 def load_settings() -> dict:
     with open(".data/config.json", "r", encoding = "utf-8") as f:
         settings = json.loads(f.read())["settings"]
-    settings["proxy"] = {"http": settings["proxy"], "https": settings["proxy"]}
+    if settings["proxy"] != "":
+        settings["proxy"] = {"http": settings["proxy"], "https": settings["proxy"]}
+    else:
+        settings["proxy"] = {}
     return settings
 
 def load_sources() -> dict:

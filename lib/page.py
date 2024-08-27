@@ -108,14 +108,16 @@ def get_page_urls(app_state, id: str) -> list[str]:
         if not result.source in app_state["sources"]:
             return []
         if (result.type == SourceType.web) and (not app_state["settings"]["proxy_webpage"]):
-            return app_state["sources"][result.source].get_pages(result.identifier) # 若未设置代理图片，获取网页源图片
+            pages_result = app_state["sources"][result.source].get_pages(result.identifier) # 若未设置代理图片，获取网页源图片
+            if (pages_result != []) and (pages_result != {}):
+                return pages_result
         pagecount = get_page_count(app_state["sources"], session, result) # 获取页面数目
         page_list = []
         for i in range(pagecount):
             page_list.append(f"/doujinshi/{str(result.id)}/page/{i}")
         return page_list
 
-def cache_page(client, type, id, num, arg1, arg2, is_7z = False): # 缓存页码
+def cache_page(client, type, id, num, arg1, arg2, arg3 = None): # 缓存页码
     page_path = f".data/cache/{id}/{num}.jpg"
     if os.path.exists(page_path):
         return
@@ -125,13 +127,16 @@ def cache_page(client, type, id, num, arg1, arg2, is_7z = False): # 缓存页码
         with open(page_path, "wb") as f:
             f.write(b"")
         if type == SourceType.web:
-            page_bytes = requests.get(arg1["urls"][num], proxies = arg2, headers = arg1["headers"]).content # 获取链接内容
+            if not arg3:
+                page_bytes = requests.get(arg1["urls"][num], proxies = arg2, headers = arg1["headers"]).content # 获取链接内容
+            else:
+                page_bytes = requests.get(arg1["url"], proxies = arg2, headers = arg1["headers"]).content # 获取链接内容
         elif type == SourceType.cloud:
             page_io = arg1.open(arg2[num]) # 读取远程zip
             page_bytes = page_io.read()
             page_io.close()
         elif type == SourceType.local:
-            if not is_7z:
+            if not arg3:
                 page_io = arg1.open(arg2[num]) # 读取zip或rar
             else:
                 page_io = arg1.read([arg2[num]])[arg2[num]] # 读取7z
@@ -155,7 +160,13 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
     except Exception as e:
         logging.error(f"fail to read doujinshi {str(doujinshi.id)}, error message: {e}")
         return
-    pagecount = len(page_urls["urls"])
+    single_page = False
+    if page_urls == {} or page_urls == []:
+        page_urls = {}
+        pagecount = doujinshi.pagecount
+        single_page = True
+    else:
+        pagecount = len(page_urls["urls"])
     id = str(doujinshi.id)
     count = 0
     while count < 3000:
@@ -171,11 +182,20 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
                 if num >= pagecount or num < 0:
                     client.set(f"{id}_{num}", -1)
                     continue
-                # threading.Thread(target = cache_page, args = (client, SourceType.web, id,
-                #                     num, page_urls, app_state["settings"]["proxy"])).start()
-                # 若使用多线程同时缓存不同页面，极易造成远程服务器限制或远程zip解压失败
-                # 不使用则速度较慢
-                cache_page(client, SourceType.web, id, num, page_urls, app_state["settings"]["proxy"])
+                if single_page:
+                    if not num in page_urls:
+                        page_urls.update(sources[doujinshi.source].get_page_urls(doujinshi.identifier, num))
+                    img_url = sources[doujinshi.source].get_img_url(page_urls[num])
+                    # threading.Thread(target = cache_page, args = (client, SourceType.web, id,
+                    #                     num, img_url, app_state["settings"]["proxy"], True)).start()
+                    cache_page(client, SourceType.web, id, num, img_url, app_state["settings"]["proxy"], True)
+                else:
+                    # threading.Thread(target = cache_page, args = (client, SourceType.web, id,
+                    #                     num, page_urls, app_state["settings"]["proxy"])).start()
+                    # 若使用多线程同时缓存不同页面，极易造成远程服务器限制或远程zip解压失败
+                    # 不使用则速度较慢
+                    cache_page(client, SourceType.web, id, num, page_urls, app_state["settings"]["proxy"])
+                time.sleep(sources[doujinshi.source].SLEEP)
                 count = 0
         except:
             pass
@@ -210,6 +230,7 @@ def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
                 # threading.Thread(target = cache_page, args = (client, SourceType.cloud, id,
                 #                     num, zip_file, filelist)).start()
                 cache_page(client, SourceType.cloud, id, num, zip_file, filelist)
+                time.sleep(sources[doujinshi.source].SLEEP)
                 count = 0
         except:
             pass
