@@ -313,7 +313,7 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
             # 等待20s，若页加载状态被释放，设置页加载状态（告诉缓存线程该加载的页码）
             num_status = client.get(f"{id}_page")
             if num_status == None:
-                with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 10):
+                with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 20):
                    # 再获取一次状态，防止两次请求同时等待锁释放进入状态设置，并因此先后设置状态，导致头一次设置被覆盖
                    if client.get(f"{id}_page") != None:
                        continue
