@@ -28,6 +28,8 @@ class Source:
         return results
 
     def get_metadata(self, id: str) -> dict:
+        if id.startswith("http://") or id.startswith("https://"):
+            id = id[id.find("-aid-") + 5 : id.find(".html")]
         res = requests.get(f"{self.__base_url}/photos-index-aid-{id}.html", proxies = self.__proxies,
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         soup = BeautifulSoup(res.content, "html.parser")

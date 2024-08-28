@@ -35,7 +35,7 @@ class OperationType(Enum):
 class BatchOperation(BaseModel):
     operation: OperationType
     name: str
-    target: list[str]
+    target: list
     replace: bool
 
 class GroupName(BaseModel):

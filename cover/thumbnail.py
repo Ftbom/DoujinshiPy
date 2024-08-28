@@ -77,7 +77,7 @@ def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
     zip_file.close()
     time.sleep(sleep_time)
 
-def get_cover(app_state, doujinshi: Doujinshi) -> None:
+def get_cover(app_state, doujinshi: Doujinshi, ignore) -> None:
     if doujinshi.type == SourceType.web:
         raise RuntimeError("this source not support generate thumbnail")
     sources = app_state["sources"]

@@ -12,18 +12,18 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
         count = 0
         for id in id_list:
             count = count + 1
-            result = session.exec(select(Doujinshi).where(Doujinshi.identifier == id).where(Doujinshi.source == source_name)).first()
-            if result != None:
-                if not is_replace:
-                    client.set("add_status", f"adding to library {count}/{num}")
-                    continue
-                else:
-                    # 覆盖旧数据
-                    if os.path.exists(f".data/thumb/{str(result.id)}.jpg"): # 删除旧封面
-                        os.remove(f".data/thumb/{str(result.id)}.jpg")
-                    session.delete(result)
             try:
                 metadata = app_state["sources"][source_name].get_metadata(id)
+                result = session.exec(select(Doujinshi).where(Doujinshi.identifier == metadata["id"]).where(Doujinshi.source == source_name)).first()
+                if result != None:
+                    if not is_replace:
+                        client.set("add_status", f"adding to library {count}/{num}")
+                        continue
+                    else:
+                        # 覆盖旧数据
+                        if os.path.exists(f".data/thumb/{str(result.id)}.jpg"): # 删除旧封面
+                            os.remove(f".data/thumb/{str(result.id)}.jpg")
+                        session.delete(result)
                 doujinshi = Doujinshi(title = metadata["title"], pagecount = metadata["pagecount"],
                             tags = "|".join(metadata["tags"]), identifier = metadata["id"],
                             type = SourceType.web, source = source_name)

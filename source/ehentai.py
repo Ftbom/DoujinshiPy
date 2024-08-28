@@ -17,10 +17,25 @@ class Source:
                                                          overwrite = True)
             self.__session.cookies = cookies
         if config["exhentai"]:
+            self.__exhentai = True
             self.__base_url = "https://exhentai.org"
         else:
+            self.__exhentai = False
             self.__base_url = "https://e-hentai.org"
         self.__banned_time = None
+    
+    def __update_cookies(self) -> None:
+        for cookie in self.__session.cookies:
+            if cookie.name == "igneous":
+                if cookie.value == "mystery":
+                    self.__session.cookies.pop("igneous")
+                else:
+                    if (cookie.expires == None) or (cookie.expires > time.time()):
+                        return
+        print(self.__session.cookies)
+        self.__session.get("https://exhentai.org/uconfig.php",
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
+        print(self.__session.cookies)
 
     def __is_banned(self):
         if self.__banned_time != None:
@@ -34,7 +49,7 @@ class Source:
             raise RuntimeError("not available in e-hentai")
         if res.text == "":
             raise RuntimeError("please update the cookies of exhentai")
-        if "been temporarily banned" in res.text:
+        if res.text.startswith("Your IP address has been temporarily banned"):
             if "and" in res.text:
                 time_str = res.text[res.text.find("expires in") + 10 : -1].split("and")
                 sec_num = int(time_str[1][0 : time_str[1].find("second")])
@@ -45,8 +60,10 @@ class Source:
                 min_num = 0
             self.__banned_time = int(time.time()) + min_num * 60 + sec_num
             raise RuntimeError("IP been banned by ehentai")
-            
+
     def get_metadata(self, ids: str) -> dict:
+        if ids.startswith("http://") or ids.startswith("https://"):
+            ids = "_".join(ids[ids.find("/g/") + 3 : -1].strip("/").split("/"))
         self.__is_banned()
         id_s = ids.split("_")
         try:
@@ -67,6 +84,8 @@ class Source:
     def get_page_urls(self, ids: str, page: int) -> dict:
         # page从0开始
         self.__is_banned()
+        if self.__exhentai:
+            self.__update_cookies()
         result = {}
         page_list = page // 40
         id_str = "/".join(ids.split("_"))
@@ -85,6 +104,8 @@ class Source:
         # api其他参数均来自图片页面url
         # {"method": "showpage","gid": 618395,"page": 1,"imgkey": "1463dfbc16","showkey": "387132-43f9269494"}
         self.__is_banned()
+        if self.__exhentai:
+            self.__update_cookies()
         res = self.__session.get(url, headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         self.__error_handle(res)
         soup = BeautifulSoup(res.content, "html.parser")

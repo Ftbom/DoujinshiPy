@@ -1,7 +1,7 @@
 import os
 from lib.database import Doujinshi, SourceType
 
-def get_tag(app_state, doujinshi: Doujinshi) -> list[str]:
+def get_tag(app_state, doujinshi: Doujinshi, ignore) -> list[str]:
     if not doujinshi.type == SourceType.local:
         return []
     path = doujinshi.identifier

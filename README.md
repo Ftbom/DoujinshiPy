@@ -140,10 +140,15 @@ class Source:
 "name": {"type": "wnacg", config: {"proxy": ""}}
 ```
 
-### hentai
+### ehentai
 
 网站
 
+若有欧美IP，**cookies不要设igneous**。
+
+否则应设igneous，且应每一个月手动更新一次
+
 ```
-"name": {"type": "wnacg", config: {"proxy": "", "exhentai": False, "cookies": {}}}
+"name": {"type": "wnacg", config: {"proxy": "", "exhentai": False,
+          "cookies": {"igneous": "", "ipb_member_id": "", "sl": "", "sk": "", "ipb_pass_hash": ""}}}
 ```
