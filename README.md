@@ -148,6 +148,8 @@ class Source:
 
 否则应设igneous，且应每一个月手动更新一次
 
+无论是否欧美IP，其他cookies均需一年手动更新一次
+
 ```
 "name": {"type": "wnacg", config: {"proxy": "", "exhentai": False,
           "cookies": {"igneous": "", "ipb_member_id": "", "sl": "", "sk": "", "ipb_pass_hash": ""}}}
