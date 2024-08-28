@@ -198,6 +198,7 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
                 time.sleep(sources[doujinshi.source].SLEEP)
                 count = 0
         except:
+            client.set(f"{id}_{num}", 0)
             pass
 
 def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
@@ -233,6 +234,7 @@ def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
                 time.sleep(sources[doujinshi.source].SLEEP)
                 count = 0
         except:
+            client.set(f"{id}_{num}", 0)
             pass
     zip_file.close()
 
@@ -259,6 +261,7 @@ def zip_page_read(file_path: str, client, id) -> None:
                 cache_page(client, SourceType.local, id, num, zip_file, filelist)
                 count = 0
         except:
+            client.set(f"{id}_{num}", 0)
             pass
     zip_file.close()
 
@@ -285,6 +288,7 @@ def rar_page_read(file_path: str, client, id) -> None:
                 cache_page(client, SourceType.local, id, num, rar_file, filelist)
                 count = 0
         except:
+            client.set(f"{id}_{num}", 0)
             pass
     rar_file.close()
 
@@ -314,6 +318,7 @@ def sevenzip_page_read(file_path: str, client, id) -> None:
                 cache_page(client, SourceType.local, id, num, sevenzip_file, filelist, True)
                 count = 0
         except:
+            client.set(f"{id}_{num}", 0)
             pass
     sevenzip_file.close() # 关闭文件
 
