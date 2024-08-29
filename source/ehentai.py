@@ -75,8 +75,8 @@ class Source:
             res = self.__session.post("https://api.e-hentai.org/api.php",
                 json = {"method": "gdata", "gidlist": [[int(id_s[0]), id_s[1]]], "namespace": 1},
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}).json()
-            if res["gmetadata"][0]["expunged"]:
-                raise RuntimeError(f"{res['gmetadata'][0]['title']} was delete from ehentai")
+        if res["gmetadata"][0]["expunged"]:
+            raise RuntimeError(f"{res['gmetadata'][0]['title']} was delete from ehentai")
         return {"id": ids, "title": res["gmetadata"][0]["title"], "pagecount": int(res["gmetadata"][0]["filecount"]),
                 "tags": res["gmetadata"][0]["tags"], "cover": {"url": res["gmetadata"][0]["thumb"], "headers": {}}}
 
