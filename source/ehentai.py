@@ -67,12 +67,14 @@ class Source:
         self.__is_banned()
         id_s = ids.split("_")
         try:
-            res = self.__session.post("https://api.e-hentai.org/api.php",
+            # res = self.__session.post("https://api.e-hentai.org/api.php",
+            res = requests.post("https://api.e-hentai.org/api.php", proxies = self.__session.proxies,
                 json = {"method": "gdata", "gidlist": [[int(id_s[0]), id_s[1]]], "namespace": 1},
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}).json()
         except:
             time.sleep(5.1) # 等待5s重试
-            res = self.__session.post("https://api.e-hentai.org/api.php",
+            # res = self.__session.post("https://api.e-hentai.org/api.php",
+            res = requests.post("https://api.e-hentai.org/api.php", proxies = self.__session.proxies,
                 json = {"method": "gdata", "gidlist": [[int(id_s[0]), id_s[1]]], "namespace": 1},
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}).json()
         if res["gmetadata"][0]["expunged"]:
