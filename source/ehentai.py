@@ -10,12 +10,18 @@ class Source:
     # 使用简单的User-Agent模拟浏览器即可很大程度上防止IP被禁
     def __init__(self, config) -> None:
         self.__session = requests.Session()
+        self.__session.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}
         if not config["proxy"] == "":
             self.__session.proxies = {"http": config["proxy"], "https": config["proxy"]}
-        if ("cookies" in config) and (config["cookies"] != {}):
-            cookies = requests.utils.cookiejar_from_dict(config["cookies"], cookiejar = None,
-                                                         overwrite = True)
-            self.__session.cookies = cookies
+        if ("user" in config) and (config["user"] != {}):
+            self.__login = True
+            self.__username = config["user"]["username"]
+            self.__passwd = config["user"]["passwd"]
+        else:
+            self.__login = False
+            if ("cookies" in config) and (config["cookies"] != {}):
+                cookies = requests.utils.cookiejar_from_dict(config["cookies"], cookiejar = None, overwrite = True)
+                self.__session.cookies = cookies
         if config["exhentai"]:
             self.__exhentai = True
             self.__base_url = "https://exhentai.org"
@@ -25,17 +31,48 @@ class Source:
         self.__banned_time = None
     
     def __update_cookies(self) -> None:
+        igneous_cookie = None
+        ipb_member_id_cookie = None
+        ipb_pass_hash_cookie = None
         for cookie in self.__session.cookies:
             if cookie.name == "igneous":
-                if cookie.value == "mystery":
-                    self.__session.cookies.pop("igneous")
-                else:
-                    if (cookie.expires == None) or (cookie.expires > time.time()):
-                        return
-        print(self.__session.cookies)
-        self.__session.get("https://exhentai.org/uconfig.php",
-                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
-        print(self.__session.cookies)
+                igneous_cookie = cookie
+            elif cookie.name == "ipb_pass_hash":
+                ipb_pass_hash_cookie = cookie
+            elif cookie.name == "ipb_member_id":
+                ipb_member_id_cookie = cookie
+        current_time = time.time()
+        need_update = False
+        if self.__login:
+            need_login = False
+            if (ipb_member_id_cookie == None) or (ipb_pass_hash_cookie == None):
+                need_login = True
+            elif (ipb_member_id_cookie.expires <= current_time) or (ipb_pass_hash_cookie.expires <= current_time):
+                need_login = True
+            if need_login:
+                need_update = True # 登陆后重新获取igneous
+                try:
+                    self.__session.cookies.pop("ipb_pass_hash")
+                    self.__session.cookies.pop("ipb_member_id")
+                except:
+                    pass
+                self.__session.post("https://forums.e-hentai.org/index.php?act=Login&CODE=01", data={
+                    "UserName": self.__username,
+                    "PassWord": self.__passwd,
+                    "submit": "Log me in",
+                    "temporary_https": "off",
+                    "CookieDate": "365"})
+        if igneous_cookie == None:
+            need_update = True
+        elif igneous_cookie.value == "mystery":
+            self.__session.cookies.pop("igneous")
+            need_update = True
+        elif igneous_cookie.expires == None:
+            need_update = False # 通过配置文件设置igneous，不更新igneous
+        elif igneous_cookie.expires <= current_time:
+            need_update = True
+        if need_update:
+            self.__session.get("https://exhentai.org/uconfig.php")
 
     def __is_banned(self):
         if self.__banned_time != None:
@@ -48,7 +85,7 @@ class Source:
         if res.status_code == 404:
             raise RuntimeError("not available in e-hentai")
         if res.text == "":
-            raise RuntimeError("please update the cookies of exhentai")
+            raise RuntimeError("please update the userinfo or cookies of exhentai")
         if res.text.startswith("Your IP address has been temporarily banned"):
             if "and" in res.text:
                 time_str = res.text[res.text.find("expires in") + 10 : -1].split("and")
@@ -93,8 +130,7 @@ class Source:
         result = {}
         page_list = page // 40
         id_str = "/".join(ids.split("_"))
-        res = self.__session.get(f"{self.__base_url}/g/{id_str}/?p={str(page_list)}",
-                        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
+        res = self.__session.get(f"{self.__base_url}/g/{id_str}/?p={str(page_list)}")
         self.__error_handle(res)
         soup = BeautifulSoup(res.content, "html.parser")
         items = soup.find("div", id = "gdt").find_all(class_ = "gdtm")
@@ -110,7 +146,7 @@ class Source:
         self.__is_banned()
         if self.__exhentai:
             self.__update_cookies()
-        res = self.__session.get(url, headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
+        res = self.__session.get(url)
         self.__error_handle(res)
         soup = BeautifulSoup(res.content, "html.parser")
         return {"url": soup.find("div", id = "i3").a.img.attrs["src"], "headers": {}}

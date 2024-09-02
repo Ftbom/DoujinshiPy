@@ -140,17 +140,43 @@ class Source:
 "name": {"type": "wnacg", config: {"proxy": ""}}
 ```
 
+### hitomi
+
+网站
+
+```
+"name": {"type": "hitomi", config: {"proxy": "", "webp": false}}
+
 ### ehentai
 
 网站
 
-若有欧美IP，**cookies不要设igneous**。
-
-否则应设igneous，且应每一个月手动更新一次
-
-无论是否欧美IP，ipb_member_id和ipb_pass_hash均需一年手动更新一次
+若不访问exhentai的内容，不需设置用户信息和cookies。
 
 ```
-"name": {"type": "wnacg", config: {"proxy": "", "exhentai": False,
+"name": {"type": "ehentai", config: {"proxy": "", "exhentai": false}}
+```
+
+若访问exhentai内容，需要设置用户信息或cookies。
+
+若为欧美IP且IP纯净，可直接设置用户名和密码。
+>设置用户名后会忽略cookies设置
+
+```
+"name": {"type": "ehentai", config: {"proxy": "", "exhentai": true,
+          "user": {"username": "", "passwd": ""}}}
+```
+
+若有欧美IP但IP不纯净，需要设置cookies，并每年手动更新cookies一次。
+
+```
+"name": {"type": "ehentai", config: {"proxy": "", "exhentai": true,
+          "cookies": {"ipb_member_id": "", "ipb_pass_hash": ""}}}
+```
+
+若没有欧美IP，cookies必须包括igneous（不可为mystery），且应每一个月手动更新一次igneous
+
+```
+"name": {"type": "ehentai", config: {"proxy": "", "exhentai": true,
           "cookies": {"igneous": "", "ipb_member_id": "", "ipb_pass_hash": ""}}}
 ```
