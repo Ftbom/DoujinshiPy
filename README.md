@@ -26,9 +26,9 @@ python install.py
 获取封面的插件
 
 ```python
-# app_state为程序信息，包括代理设置和数据库等
+# app_state为程序信息，包括代理设置和数据库等。详细信息见api.py
 def get_cover(app_state, doujinshi: Doujinshi, url) -> None:
-  if url == None:
+  if url != None:
     # 通过url获取
     pass
   else:
@@ -43,9 +43,9 @@ def get_cover(app_state, doujinshi: Doujinshi, url) -> None:
 ### tag
 
 ```python
-# app_state为程序信息，包括代理设置和数据库等
+# app_state为程序信息，包括代理设置和数据库等。详细信息见api.py
 def get_tag(app_state, doujinshi: Doujinshi, url) -> list[str]:
-  if url == None:
+  if url != None:
     # 通过url获取
     pass
   else:
