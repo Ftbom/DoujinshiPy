@@ -23,17 +23,34 @@ python install.py
 
 ### cover
 
+获取封面的插件
+
 ```python
-def get_cover(app_state, doujinshi: Doujinshi) -> None:
+# app_state为程序信息，包括代理设置和数据库等
+def get_cover(app_state, doujinshi: Doujinshi, url) -> None:
+  if url == None:
+    # 通过url获取
+    pass
+  else:
+    # 通过doujinshi信息获取
+    pass
   with open(f".data/thumb/{doujinshi.id}.jpg", "wb") as f:
     f.write(res)
 ```
 >注意对一些网站需要适当sleep，防止网站封禁IP
+>
 
 ### tag
 
 ```python
-def get_tag(app_state, doujinshi: Doujinshi) -> list[str]:
+# app_state为程序信息，包括代理设置和数据库等
+def get_tag(app_state, doujinshi: Doujinshi, url) -> list[str]:
+  if url == None:
+    # 通过url获取
+    pass
+  else:
+    # 通过doujinshi信息获取
+    pass
   return tags
 ```
 >注意对一些网站需要适当sleep，防止网站封禁IP
@@ -146,6 +163,7 @@ class Source:
 
 ```
 "name": {"type": "hitomi", config: {"proxy": "", "webp": false}}
+```
 
 ### ehentai
 
