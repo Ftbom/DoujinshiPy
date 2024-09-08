@@ -4,7 +4,7 @@
 
 ## 安装
 
-**需要安装unrar和memcached**
+**需要安装unrar和redis**
 
 ```shell
 python install.py
