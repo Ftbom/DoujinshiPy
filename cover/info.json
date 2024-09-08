@@ -6,5 +6,13 @@
     "wnacg": {
         "name": "绅士漫画",
         "description": "通过绅士漫画获取封面"
+    },
+    "ehentai": {
+        "name": "E-hentai",
+        "description": "通过E-hentai获取封面"
+    },
+    "hentag": {
+        "name": "Hentag",
+        "description": "通过Hentag获取封面"
     }
 }
