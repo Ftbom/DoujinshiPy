@@ -25,21 +25,44 @@ class Group(SQLModel, table = True):
     id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # 自动生成id
     name: str
 
-def get_metadata(doujinshi: Doujinshi) -> dict:
+def get_groups(session: Session) -> dict:
+    group_list = {}
+    group_data = session.exec(select(Group))
+    for g in group_data:
+        group_list[str(g.id)] = g.name
+    return group_list
+
+def get_metadata(doujinshi: Doujinshi, group_list: dict) -> dict:
     tags = doujinshi.tags.split("|")
     try:
         tags.remove("")
     except:
         pass
-    return {"id": str(doujinshi.id), "title": doujinshi.title,
-            "tags": tags, "cover": f"/doujinshi/{str(doujinshi.id)}/thumbnail"}
+    # 获取group
+    groups = []
+    group_ids = doujinshi.groups.split("|")
+    try:
+        group_ids.remove("")
+    except:
+        pass
+    for gid in group_ids:
+        groups.append(group_list[gid])
+    # 获取封面
+    thumb_path = f".data/thumb/{str(doujinshi.id)}.jpg"
+    if not os.path.exists(thumb_path):
+        cover_url = "/doujinshi/nothumb/thumbnail"
+    else:
+        cover_url = f"/doujinshi/{str(doujinshi.id)}/thumbnail"
+    return {"id": str(doujinshi.id), "title": doujinshi.title, "source": doujinshi.source,
+            "groups": groups, "tags": tags, "cover": cover_url}
 
 def get_doujinshi_list(engine, random_num) -> dict:
     doujinshi = []
     with Session(engine) as session:
+        group_list = get_groups(session)
         results = session.exec(select(Doujinshi))
         for result in results:
-            doujinshi.append(get_metadata(result))
+            doujinshi.append(get_metadata(result, group_list))
         if random_num != None: # 随机
             return random.sample(doujinshi, min(len(doujinshi), random_num))
         return doujinshi
@@ -53,7 +76,8 @@ def get_doujinshi_by_id(engine, id: str) -> dict:
         result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
         if result == None:
             return {}
-        return get_metadata(result)
+        group_list = get_groups(session)
+        return get_metadata(result, group_list)
 
 def delete_metadata(engine, id: str) -> dict:
     with Session(engine) as session:
@@ -64,27 +88,18 @@ def delete_metadata(engine, id: str) -> dict:
         result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
         if result == None:
             return False
+        try:
+            os.remove(f".data/thumb/{str(result.id)}.jpg")
+        except:
+            pass
         session.delete(result)
         session.commit()
         return True
 
-def get_thumb_by_id(engine, id: str):
-    with Session(engine) as session:
-        try:
-            uid = uuid.UUID(id)
-        except:
-            return None
-        result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
-        if result == None:
-            return None
-        thumb_path = f".data/thumb/{str(uid)}.jpg"
-        if not os.path.exists(thumb_path):
-            return "cover/nothumb.png"
-        return thumb_path
-
 def search_doujinshi(engine, parameters) -> dict:
     doujinshi = []
     with Session(engine) as session:
+        group_list = get_groups(session)
         results = session.exec(select(Doujinshi).where(Doujinshi.title.like(f"%{parameters[0]}%")))
         for result in results: # 应用tag筛选
             if len(parameters[1]) != 0:
@@ -111,7 +126,7 @@ def search_doujinshi(engine, parameters) -> dict:
             if len(parameters[3]) != 0: # 应用源筛选
                 if parameters[3] != result.source:
                     continue
-            doujinshi.append(get_metadata(result))
+            doujinshi.append(get_metadata(result, group_list))
         return doujinshi
 
 def set_metadata(engine, id: str, metadata) -> bool:
@@ -144,14 +159,14 @@ def get_doujinshi_by_group(engine, id: str) -> dict:
             uid = uuid.UUID(id)
         except:
             return {}
-        result = session.exec(select(Group).where(Group.id == uid)).first()
-        if result == None:
+        group_list = get_groups(session)
+        if not str(uid) in group_list:
             return {}
         results = session.exec(select(Doujinshi).where(Doujinshi.groups.like(f"%{str(uid)}%")))
         items = []
         for r in results:
-            items.append(get_metadata(r)) # 获取metadata
-        return {"name": result.name, "doujinshis": items}
+            items.append(get_metadata(r, group_list)) # 获取metadata
+        return {"name": group_list[str(uid)], "doujinshis": items}
 
 def rename_group_by_id(engine, id: str, name: str) -> int:
     with Session(engine) as session:

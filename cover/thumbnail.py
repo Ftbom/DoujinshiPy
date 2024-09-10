@@ -77,15 +77,12 @@ def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
     zip_file.close()
     time.sleep(sleep_time)
 
-def get_cover(app_state, doujinshi: Doujinshi, ignore) -> None:
+def get_cover(source, proxy, doujinshi: Doujinshi, url) -> None:
     if doujinshi.type == SourceType.web:
         raise RuntimeError("this source not support generate thumbnail")
-    sources = app_state["sources"]
-    if not doujinshi.source in sources:
-        raise RuntimeError("incorrect source name")
     # get file identifier
-    file_identifier = sources[doujinshi.source].get_file(doujinshi.identifier)
+    file_identifier = source.get_file(doujinshi.identifier)
     if doujinshi.type == SourceType.local:
         local_thumbnail(file_identifier, doujinshi.id)
     elif doujinshi.type == SourceType.cloud:
-        cloud_thumbnail(file_identifier, doujinshi.id, sources[doujinshi.source].SLEEP)
+        cloud_thumbnail(file_identifier, doujinshi.id, source.SLEEP)

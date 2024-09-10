@@ -11,15 +11,15 @@ def search_name(name: str, proxy: dict) -> str:
     url = soup.find("table", class_ = "itg").find_all("tr")[1].find("td", class_ = "gl3c").a.attrs["href"]
     return url
 
-def get_cover(app_state, doujinshi: Doujinshi, url) -> None:
+def get_cover(source, proxy, doujinshi: Doujinshi, url) -> None:
     if url == None:
         name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
-        url = search_name(name, app_state["settings"]["proxy"])
+        url = search_name(name, proxy)
     ids = url[url.find("/g/") + 3 : -1].strip("/").split("/")
-    res = requests.post("https://api.e-hentai.org/api.php", proxies = app_state["settings"]["proxy"],
+    res = requests.post("https://api.e-hentai.org/api.php", proxies = proxy,
                 json = {"method": "gdata", "gidlist": [[int(ids[0]), ids[1]]], "namespace": 1},
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}).json()
     with open(f".data/thumb/{doujinshi.id}.jpg", "wb") as f:
-        res = requests.get(res["gmetadata"][0]["thumb"], proxies = app_state["settings"]["proxy"]).content
+        res = requests.get(res["gmetadata"][0]["thumb"], proxies = proxy).content
         f.write(res)
     time.sleep(0.8)

@@ -3,7 +3,7 @@ import time
 import requests
 from lib.database import Doujinshi
 
-def get_tag(app_state, doujinshi: Doujinshi, url) -> list:
+def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
     if url == None:
         name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
         url = "https://hentag.com/api/v1/search/vault/title"
@@ -13,7 +13,7 @@ def get_tag(app_state, doujinshi: Doujinshi, url) -> list:
             url = url.strip("/").split("/")[-1]
         json = {"ids": [url]}
         url = "https://hentag.com/api/v1/search/vault/id"
-    res = requests.post(url, proxies = app_state["settings"]["proxy"], json = json).json()
+    res = requests.post(url, proxies = proxy, json = json).json()
     data = res[0]
     tags = []
     if "language" in data:

@@ -1,0 +1,23 @@
+{
+    "local": {
+        "description": "本地文件"
+    },
+    "onedrive": {
+        "description": "Onedrive文件"
+    },
+    "pcloud": {
+        "description": "Pcloud文件"
+    },
+    "wnacg": {
+        "web": {"search": true},
+        "description": "绅士漫画"
+    },
+    "ehentai": {
+        "web": {"search": false},
+        "description": "E-hentai/Exhentai"
+    },
+    "hitomi": {
+        "web": {"search": false},
+        "description": "Hitomi"
+    }
+}

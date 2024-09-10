@@ -8,10 +8,5 @@ logging.basicConfig(filename = ".data/info.log", encoding = "utf-8",
 from api import *
 
 if __name__ == '__main__':
-    app_init() # init
-    try:
-        app_state["redis_client"].flushall()
-    except:
-        print("please start redis first")
-        exit()
+    app_init(app_state) # init
     uvicorn.run(app = app, host = app_state["settings"]["host"], port = app_state["settings"]["port"])

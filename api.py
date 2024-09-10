@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, status
 from lib.utils import get_file_infos
 from sqlmodel import SQLModel, create_engine
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 
 class PasswdAuth(BaseModel):
@@ -71,7 +71,7 @@ def verify_token(token: str):
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"sources": list(app_state["sources"]), # 可用源及“插件”
+    return {"sources": get_sources(), # 可用源及“插件”
             "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
 
 @app.get("/scan")
@@ -101,9 +101,9 @@ def scan_library(scan: StartScan, token: str = Depends(oauth2)) -> dict:
     if not scan.start: # 是否开始扫描
         return {"msg": ""}
     if not scan.source_name in sources: # 源名称是否正确
-        return {"error": "incorrect source name"}
+        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
     if sources[scan.source_name].TYPE == SourceType.web: # web源不支持扫描
-        return {"msg": "this source does not support scanning"}
+        return JSONResponse({"error": "this source does not support scanning"}, status_code = 400)
     client = app_state["redis_client"]
     with client.lock("scan_status_lock", blocking = True, blocking_timeout = 1):
         # 加锁，防止同时发出扫描请求时，创建多个扫描线程
@@ -113,7 +113,8 @@ def scan_library(scan: StartScan, token: str = Depends(oauth2)) -> dict:
         else:
             scan_status_code = int(scan_status_code)
         if scan_status_code in [1, 2]: # 扫描进行中
-            return {"error": f"scanning the {client.get('scan_source_name')} library, please wait and try again later"}
+            return JSONResponse({"error": f"scanning the {client.get('scan_source_name')} library, please wait and try again later"},
+                                 status_code = 503)
         client.set("scan_status_code", 1) # 设置扫描已开始状态
     threading.Thread(target = scan_to_database,
                     args = (app_state, scan.source_name)).start()
@@ -124,9 +125,9 @@ def add_to_library(add: AddLibrary, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     sources = app_state["sources"]
     if not add.source_name in sources:
-        return {"error": "incorrect source name"}
+        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
     if not sources[add.source_name].TYPE == SourceType.web: # 仅web源支持添加
-        return {"msg": "this source does not support adding"}
+        return JSONResponse({"error": "this source does not support adding"}, status_code = 400)
     client = app_state["redis_client"]
     with client.lock("add_status_lock", blocking = True, blocking_timeout = 1):
         # 加锁，防止同时发出请求时，创建多个线程
@@ -134,7 +135,7 @@ def add_to_library(add: AddLibrary, token: str = Depends(oauth2)) -> dict:
         if add_status == None:
             add_status = "none"
         if (not str(add_status) == "none") and (not add_status == "finished"):
-            return {"msg": "trying to add some doujinshi to library, please wait and try again later"}
+            return JSONResponse({"msg": "trying to add some doujinshi to library, please wait and try again later"}, status_code = 503)
         client.set("add_status", "started")
     threading.Thread(target = batch_add_to_library,
                      args = (app_state, add.target, add.source_name, add.replace)).start()
@@ -162,17 +163,19 @@ def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> di
         if operation_status == None:
             operation_status = "none"
         if (not operation_status == "none") and (not operation_status == "finished"):
-            return {"msg": "some batch operations is running, please wait and try again later"}
+            return JSONResponse({"msg": "some batch operations is running, please wait and try again later"}, status_code = 503)
         client.set("batch_operation", "started")
     if setting.operation == OperationType.group:
         if "|" in setting.name:
-            return {"error": "group name should not contain '|'"}
+            client.delete("batch_operation")
+            return JSONResponse({"error": "group name should not contain '|'"}, status_code = 400)
         threading.Thread(target = batch_set_group, args = (app_state, setting.name, setting.target, setting.replace)).start()
         return {"msg": "start setting group, get the status: /batch"}
     else:
         # 加载并应用“插件”
         if not os.path.exists(os.path.join(setting.operation.value, f"{setting.name}.py")):
-            return {"error": f"not support {setting.name} in {setting.operation.value} operation"}
+            client.delete("batch_operation")
+            return JSONResponse({"error": f"not support {setting.name} in {setting.operation.value} operation"}, status_code = 400)
         if setting.operation == OperationType.cover:
             threading.Thread(target = batch_get_cover, args = (app_state, setting.target, setting.replace,
                                 importlib.import_module(f"cover.{setting.name}").get_cover)).start()
@@ -204,10 +207,10 @@ def get_doujinshi_by_group_id(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         result = get_doujinshi_by_group(app_state["database_engine"], id)
         if result == {}:
-            return {"error": f"group {id} not exists"}
+            return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
     except:
-        return {"error": f"fail to get doujinshi by group {id}"}
+        return JSONResponse({"error": f"fail to get doujinshi by group {id}"}, status_code = 500)
 
 @app.delete("/group/{id}")
 def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
@@ -216,9 +219,9 @@ def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
         if delete_group_by_id(app_state["database_engine"], id):
             return {"msg": f"success to delete group {id}"}
         else:
-            return {"error": f"group {id} not exists"}
+            return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
     except:
-        return {"error": f"fail to delete group {id}"}
+        return JSONResponse({"error": f"fail to delete group {id}"}, status_code = 500)
 
 @app.put("/group/{id}")
 def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth2)) -> dict:
@@ -228,11 +231,11 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
         if res == 1:
             return {"msg": f"success to rename group {id}"}
         elif res == 0:
-            return {"error": f"group {group_name.name} already exists"}
+            return JSONResponse({"error": f"group {group_name.name} already exists"}, status_code = 409)
         elif res == -1:
-            return {"error": f"group {id} not exists"}
+            return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
     except:
-        return {"error": f"fail to rename group {id}"}
+        return JSONResponse({"error": f"fail to rename group {id}"}, status_code = 500)
 
 @app.get("/doujinshi")
 def get_all_doujinshis(random: Union[int, None] = None, token: str = Depends(oauth2)) -> dict:
@@ -245,10 +248,10 @@ def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         result = get_doujinshi_by_id(app_state["database_engine"], id)
         if result == {}:
-            return {"error": f"doujinshi {id} not exists"}
+            return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
     except:
-        return {"error": f"fail to get doujinshi by id {id}"}
+        return JSONResponse({"error": f"fail to get doujinshi by id {id}"}, status_code = 500)
 
 @app.put("/doujinshi/{id}/metadata")
 def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oauth2)) -> dict:
@@ -257,9 +260,9 @@ def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oau
         if set_metadata(app_state["database_engine"], id, edit):
             return {"msg": f"success to set metadata of doujinshi {id}"}
         else:
-            return {"error": f"doujinshi {id} not exists"}
+            return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
     except:
-        return {"error": f"fail to set metadata of doujinshi {id}"}
+        return JSONResponse({"error": f"fail to set metadata of doujinshi {id}"}, status_code = 500)
 
 @app.delete("/doujinshi/{id}/metadata")
 def delete_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
@@ -268,9 +271,9 @@ def delete_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
         if delete_metadata(app_state["database_engine"], id):
             return {"msg": f"success to delete metadata of doujinshi {id}"}
         else:
-            return {"error": f"doujinshi {id} not exists"}
+            return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
     except:
-        return {"error": f"fail to delete metadata of doujinshi {id}"}
+        return JSONResponse({"error": f"fail to delete metadata of doujinshi {id}"}, status_code = 500)
 
 @app.get("/doujinshi/{id}/pages")
 def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
@@ -278,10 +281,10 @@ def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
     try:
         result = get_page_urls(app_state, id)
         if result == []:
-            return {"error": f"doujinshi {id} not exists or source not enabled"}
+            return JSONResponse({"error": f"doujinshi {id} not exists or source not enabled"}, status_code = 404)
         return {"msg": "success", "data": result}
     except:
-        return {"error": f"fail to get pages of doujinshi {id}"}
+        return JSONResponse({"error": f"fail to get pages of doujinshi {id}"}, status_code = 500)
 
 @app.get("/doujinshi/{id}/page/{num}")
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
@@ -301,7 +304,7 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
         read_thread = client.get(f"{id}_read")
     if read_thread == '-1':
         # client.delete(f"{id}_read") # reset
-        return {"error": f"doujinshi {id} does not exist or source not enabled"}
+        return JSONResponse({"error": f"doujinshi {id} does not exist or source not enabled"}, status_code = 404)
     # 文件已存在则无需后续操作
     file_path = f".data/cache/{id}/{num}.jpg"
     if os.path.exists(file_path): # 文件已存在，返回文件
@@ -322,33 +325,35 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
             time.sleep(0.5)
             count = count + 1
         if count >= 20: # 超时
-            return {"error": "busy to load pages, please try later"}
+            return JSONResponse({"error": "busy to load pages, please try later"}, status_code = 503)
     except:
-        return {"error": "busy to load pages, please try later"}
+        return JSONResponse({"error": "busy to load pages, please try later"}, status_code = 503)
     count = 0
     while count < 20: # 等待10s，等待页码缓存
         # 获取页码状态
         page_status = client.get(f"{id}_{num}")
         if page_status == '-1':
             client.delete(f"{id}_{num}") # 重置
-            return {"error": f"doujinshi {id} not contain the {num} page"}
+            return JSONResponse({"error": f"doujinshi {id} not contain the {num} page"}, 404)
         if page_status == '0':
             client.delete(f"{id}_{num}") # 重置
-            return {"error": f"fail to get page {num} of doujinshi {id}"}
+            return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500)
         if os.path.exists(file_path): # 文件已存在，返回文件
             if os.path.getsize(file_path) > 0:
                 return FileResponse(file_path)
         count = count + 1
         time.sleep(0.5)
-    return {"error": f"fail to get page {num} of doujinshi {id}"} # 超时
+    return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500) # 超时
 
 @app.get("/doujinshi/{id}/thumbnail")
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     verify_token(token)
-    thumb_path = get_thumb_by_id(app_state["database_engine"], id)
-    if thumb_path == None:
-        return {"error": f"doujinshi {id} not exist"}
-    return FileResponse(thumb_path)
+    if id == "nothumb":
+        return FileResponse("nothumb.png")
+    thumb_path = f".data/thumb/{id}.jpg"
+    if os.path.exists(thumb_path):
+        return FileResponse(thumb_path)
+    return JSONResponse({"error": f"doujinshi {id} not exist"}, status_code = 404)
 
 @app.get("/search")
 def search(query: str, source_name: str = "", tag: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
@@ -365,23 +370,23 @@ def search_web(source_name: str, query: str, page: int, token: str = Depends(oau
     verify_token(token)
     sources = app_state["sources"]
     if not source_name in sources:
-        return {"error": "incorrect source name"}
+        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
     if not sources[source_name].TYPE == SourceType.web: # just web source support
-        return {"error": "this source does not support web search"}
+        return JSONResponse({"error": "this source does not support web search"}, status_code = 400)
     obj = sources[source_name]
     if hasattr(obj, "search") and callable(getattr(obj, "search")):
         return {"msg": "success", "data": obj.search(query, page)}
     else:
-        return {"error": "this source does not support web search"}
+        return JSONResponse({"error": "this source does not support web search"}, status_code = 400)
 
 @app.get("/web/{source_name}/{id}/metadata")
 def get_web_doujinshi(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     sources = app_state["sources"]
     if not source_name in sources:
-        return {"error": "incorrect source name"}
+        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
     if not sources[source_name].TYPE == SourceType.web: # just web source support
-        return {"error": "this source does not support web metadata"}
+        return JSONResponse({"error": "this source does not support web metadata"}, status_code = 400)
     return {"msg": "success", "data": sources[source_name].get_metadata(id)}
 
 @app.get("/web/{source_name}/{id}/pages")
@@ -389,7 +394,7 @@ def get_web_doujinshi_pages(source_name: str, id: str, token: str = Depends(oaut
     verify_token(token)
     sources = app_state["sources"]
     if not source_name in sources:
-        return {"error": "incorrect source name"}
+        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
     if not sources[source_name].TYPE == SourceType.web: # just web source support
-        return {"error": "this source does not support web pages"}
+        return JSONResponse({"error": "this source does not support web pages"}, status_code = 400)
     return {"msg": "success", "data": sources[source_name].get_pages(id)}

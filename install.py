@@ -21,7 +21,8 @@ with open(".data/config.json", "w", encoding = "utf-8") as f:
             "port": 9000,
             "proxy": "",
             "proxy_webpage": False,
-            "passwd": "demo"
+            "passwd": "demo",
+            "max_cache_size": 2048 # 2GB
         },
         "source": {
             "Local": {

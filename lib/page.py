@@ -2,6 +2,7 @@ import os
 import uuid
 import time
 import py7zr
+import shutil
 import rarfile
 import zipfile
 import logging
@@ -142,6 +143,20 @@ def cache_page(client, type, id, num, arg1, arg2, arg3 = None): # 缓存页码
                 page_io = arg1.read([arg2[num]])[arg2[num]] # 读取7z
             page_bytes = page_io.read()
             page_io.close()
+        # 更新缓存大小，过大则清空缓存
+        with client.lock(f"cache_lock", blocking = True, blocking_timeout = 10):
+            cache_size = int(client.get("cache_size"))
+            cache_size_limit = int(client.get("cache_size_limit"))
+            if cache_size >= cache_size_limit:
+                try:
+                    shutil.rmtree(".data/cache")
+                except:
+                    pass
+                os.makedirs(".data/cache", exist_ok = True)
+                cache_size = 0
+            cache_size = cache_size + len(page_bytes)
+            client.set("cache_size", cache_size)
+        os.makedirs(f".data/cache/{id}", exist_ok = True)
         with open(page_path, "wb") as f:
             f.write(page_bytes)
     except Exception as e:

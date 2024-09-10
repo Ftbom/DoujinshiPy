@@ -84,7 +84,7 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 logging.warning(f"don't find id {id}, skip getting cover")
             else:
                 try:
-                    func(app_state, result, url) # 获取封面的函数
+                    func(app_state["sources"][result.source], app_state["settings"]["proxy"], result, url) # 获取封面的函数
                     logging.info(f"get cover {id}.jpg")
                 except Exception as e:
                     logging.error(f"failed to get cover {id}.jpg, error message: {e}")
@@ -120,7 +120,7 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
                 logging.warning(f"don't find id {id}, skip getting tag")
             else:
                 try:
-                    new_tags = func(app_state, result, url) # 获取tag的函数
+                    new_tags = func(app_state["sources"][result.source], app_state["settings"]["proxy"], result, url) # 获取tag的函数
                     if replace_old and new_tags != []:
                         tags = new_tags
                     else:
