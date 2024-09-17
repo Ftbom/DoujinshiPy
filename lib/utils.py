@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+import requests
 import importlib
 
 def app_init(app_state) -> None:
@@ -12,6 +13,7 @@ def app_init(app_state) -> None:
         exit()
     os.makedirs(".data/cache", exist_ok = True)
     os.makedirs(".data/thumb", exist_ok = True)
+    # 缓存大小检查
     cache_size = get_cache_size()
     cache_size_limit = app_state["settings"]["max_cache_size"] * 1024 * 1024
     if cache_size >= cache_size_limit:
@@ -33,6 +35,35 @@ def get_cache_size() -> int:
                 total_size = total_size + os.path.getsize(file_path)
     return total_size
 
+def get_ehtag_database(proxy):
+    print("check for EhTagTranslation database update...")
+    releases_url = "https://api.github.com/repos/EhTagTranslation/Database/releases"
+    content = requests.get(releases_url, proxies = proxy).content
+    json_data = json.loads(content)
+    release_tag_name = json_data[0]["tag_name"]
+    if not os.path.exists(f".data/tag_database.{release_tag_name}.json"):
+        for file_name in os.listdir(".data"):
+            if "tag_database" in file_name:
+                try:
+                    os.remove(os.path.join(".data", file_name))
+                except:
+                    pass
+        print("find new version, try to download...")
+        download_url = "https://github.com/EhTagTranslation/Database/releases/latest/download/db.text.json"
+        content = requests.get(download_url, proxies = proxy).content
+        json_data = json.loads(content)
+        data = {}
+        for t in json_data["data"][2 :]:
+            data_content = {}
+            for i in t["data"].keys():
+                data_content[i] = t["data"][i]["name"]
+            data[t["namespace"]] = data_content
+        with open(f".data/tag_database.{release_tag_name}.json", "wb") as f:
+            f.write(json.dumps(data).encode("utf-8"))
+        return data
+    with open(f".data/tag_database.{release_tag_name}.json", "rb") as f:
+        return json.loads(f.read())
+
 def load_settings() -> dict:
     with open(".data/config.json", "r", encoding = "utf-8") as f:
         settings = json.loads(f.read())["settings"]
@@ -40,6 +71,10 @@ def load_settings() -> dict:
         settings["proxy"] = {"http": settings["proxy"], "https": settings["proxy"]}
     else:
         settings["proxy"] = {}
+    if settings["tag_translate"]:
+        settings["tag_translate"] = get_ehtag_database(settings["proxy"])
+    else:
+        settings["tag_translate"] = None
     return settings
 
 def load_sources() -> dict:

@@ -32,19 +32,35 @@ def get_groups(session: Session) -> dict:
         group_list[str(g.id)] = g.name
     return group_list
 
-def get_metadata(doujinshi: Doujinshi, group_list: dict) -> dict:
+def translate_tags(tags, tag_database):
+    new_tags = []
+    for tag in tags:
+        tag_parts = tag.split(":")
+        if len(tag_parts) == 1:
+            new_tags.append(tag)
+        else:
+            tag_type = tag_parts[0].strip()
+            tag_value = tag_parts[1].strip()
+            if tag_type in tag_database:
+                if tag_value in tag_database[tag_type]:
+                    new_tags.append(f"{tag_type}:{tag_database[tag_type][tag_value]}")
+                else:
+                    new_tags.append(tag)
+            else:
+                new_tags.append(tag)
+    return new_tags
+
+def get_metadata(doujinshi: Doujinshi, group_list: dict, tag_database: dict = None) -> dict:
     tags = doujinshi.tags.split("|")
-    try:
-        tags.remove("")
-    except:
-        pass
+    tags = [item for item in tags if item != ""]
+    if not tag_database == None:
+        translated_tags = translate_tags(tags, tag_database)
+    else:
+        translated_tags = None
     # 获取group
     groups = []
     group_ids = doujinshi.groups.split("|")
-    try:
-        group_ids.remove("")
-    except:
-        pass
+    group_ids = [item for item in group_ids if item != ""]
     for gid in group_ids:
         groups.append(group_list[gid])
     # 获取封面
@@ -53,21 +69,24 @@ def get_metadata(doujinshi: Doujinshi, group_list: dict) -> dict:
         cover_url = "/doujinshi/nothumb/thumbnail"
     else:
         cover_url = f"/doujinshi/{str(doujinshi.id)}/thumbnail"
+    if translated_tags == None:
+        return {"id": str(doujinshi.id), "title": doujinshi.title, "source": doujinshi.source,
+                "groups": groups, "tags": tags, "cover": cover_url}
     return {"id": str(doujinshi.id), "title": doujinshi.title, "source": doujinshi.source,
-            "groups": groups, "tags": tags, "cover": cover_url}
+                "groups": groups, "tags": tags, "translated_tags": translated_tags, "cover": cover_url}
 
-def get_doujinshi_list(engine, random_num) -> dict:
+def get_doujinshi_list(engine, random_num, tag_database) -> dict:
     doujinshi = []
     with Session(engine) as session:
         group_list = get_groups(session)
         results = session.exec(select(Doujinshi))
         for result in results:
-            doujinshi.append(get_metadata(result, group_list))
+            doujinshi.append(get_metadata(result, group_list, tag_database))
         if random_num != None: # 随机
             return random.sample(doujinshi, min(len(doujinshi), random_num))
         return doujinshi
 
-def get_doujinshi_by_id(engine, id: str) -> dict:
+def get_doujinshi_by_id(engine, id: str, tag_database) -> dict:
     with Session(engine) as session:
         try:
             uid = uuid.UUID(id)
@@ -77,7 +96,7 @@ def get_doujinshi_by_id(engine, id: str) -> dict:
         if result == None:
             return {}
         group_list = get_groups(session)
-        return get_metadata(result, group_list)
+        return get_metadata(result, group_list, tag_database)
 
 def delete_metadata(engine, id: str) -> dict:
     with Session(engine) as session:
@@ -96,7 +115,7 @@ def delete_metadata(engine, id: str) -> dict:
         session.commit()
         return True
 
-def search_doujinshi(engine, parameters) -> dict:
+def search_doujinshi(engine, parameters, tag_database) -> dict:
     doujinshi = []
     with Session(engine) as session:
         group_list = get_groups(session)
@@ -104,10 +123,7 @@ def search_doujinshi(engine, parameters) -> dict:
         for result in results: # 应用tag筛选
             if len(parameters[1]) != 0:
                 r_tags = result.tags.split("|")
-                try:
-                    r_tags.remove("")
-                except:
-                    pass
+                r_tags = [item for item in r_tags if item != ""]
                 skip = False
                 for i in parameters[1]:
                     if not i in r_tags:
@@ -117,16 +133,13 @@ def search_doujinshi(engine, parameters) -> dict:
                     continue
             if len(parameters[2]) != 0: # 应用group筛选
                 r_groups = result.groups.split("|")
-                try:
-                    r_groups.remove("")
-                except:
-                    pass
+                r_groups = [item for item in r_groups if item != ""]
                 if not parameters[2] in r_groups:
                     continue
             if len(parameters[3]) != 0: # 应用源筛选
                 if parameters[3] != result.source:
                     continue
-            doujinshi.append(get_metadata(result, group_list))
+            doujinshi.append(get_metadata(result, group_list, tag_database))
         return doujinshi
 
 def set_metadata(engine, id: str, metadata) -> bool:

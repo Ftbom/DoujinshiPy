@@ -1,4 +1,6 @@
+import os
 import time
+import pickle
 import requests
 from bs4 import BeautifulSoup
 from lib.database import SourceType
@@ -46,6 +48,18 @@ class Source:
         if self.__login:
             need_login = False
             if (ipb_member_id_cookie == None) or (ipb_pass_hash_cookie == None):
+                if os.path.exists(os.path.join(".data", "eh_cookies.pkl")):
+                    with open(os.path.join(".data", "eh_cookies.pkl"), "rb") as f:
+                        cookies_from_file = pickle.load(f)
+                    self.__session.cookies.update(cookies_from_file)
+                    for cookie in self.__session.cookies:
+                        if cookie.name == "igneous":
+                            igneous_cookie = cookie
+                        elif cookie.name == "ipb_pass_hash":
+                            ipb_pass_hash_cookie = cookie
+                        elif cookie.name == "ipb_member_id":
+                            ipb_member_id_cookie = cookie       
+            if (ipb_member_id_cookie == None) or (ipb_pass_hash_cookie == None):
                 need_login = True
             elif (ipb_member_id_cookie.expires <= current_time) or (ipb_pass_hash_cookie.expires <= current_time):
                 need_login = True
@@ -62,6 +76,8 @@ class Source:
                     "submit": "Log me in",
                     "temporary_https": "off",
                     "CookieDate": "365"})
+                with open(os.path.join(".data", "eh_cookies.pkl"), "wb") as f:
+                    pickle.dump(self.__session.cookies, f)
         if igneous_cookie == None:
             need_update = True
         elif igneous_cookie.value == "mystery":

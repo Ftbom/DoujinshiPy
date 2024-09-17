@@ -34,10 +34,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
                     group_str = str(group_result.id)
                 else:
                     group_list = result.groups.split("|")
-                    try:
-                        group_list.remove("")
-                    except:
-                        pass
+                    group_list = [item for item in group_list if item != ""]
                     if not str(group_result.id) in group_list:
                         group_list.append(str(group_result.id))
                     group_str = "|".join(group_list)
@@ -125,10 +122,7 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
                         tags = new_tags
                     else:
                         tags = result.tags.split("|")
-                        try:
-                            tags.remove("")
-                        except:
-                            pass
+                        tags = [item for item in tags if item != ""]
                         for t in new_tags:
                             if not t in tags:
                                 tags.append(t)

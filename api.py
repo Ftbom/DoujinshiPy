@@ -240,13 +240,13 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
 @app.get("/doujinshi")
 def get_all_doujinshis(random: Union[int, None] = None, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_doujinshi_list(app_state["database_engine"], random)}
+    return {"msg": "success", "data": get_doujinshi_list(app_state["database_engine"], random, app_state["settings"]["tag_translate"])}
 
 @app.get("/doujinshi/{id}/metadata")
 def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        result = get_doujinshi_by_id(app_state["database_engine"], id)
+        result = get_doujinshi_by_id(app_state["database_engine"], id, app_state["settings"]["tag_translate"])
         if result == {}:
             return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
@@ -308,8 +308,12 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
     # 文件已存在则无需后续操作
     file_path = f".data/cache/{id}/{num}.jpg"
     if os.path.exists(file_path): # 文件已存在，返回文件
-        if os.path.getsize(file_path) > 0:
-            return FileResponse(file_path)
+        # 检查缓存期限
+        if (os.path.getmtime(file_path) + app_state["settings"]["cache_expire"] * 86400) <= time.time():
+            os.remove(file_path)
+        else:
+            if os.path.getsize(file_path) > 0:
+                return FileResponse(file_path)
     try:
         count = 0
         while count < 40:
@@ -363,7 +367,7 @@ def search(query: str, source_name: str = "", tag: str = "", group: str = "", to
         tag_list[i] = tag_list[i].strip(" ")
     tag_list = [item for item in tag_list if item != ""]
     return {"msg": "success", "data": search_doujinshi(app_state["database_engine"],
-                                                       (query, tag_list, group, source_name))}
+                                            (query, tag_list, group, source_name), app_state["settings"]["tag_translate"])}
 
 @app.get("/web/{source_name}/search")
 def search_web(source_name: str, query: str, page: int, token: str = Depends(oauth2)) -> dict:
