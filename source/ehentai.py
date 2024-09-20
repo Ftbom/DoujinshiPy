@@ -132,8 +132,10 @@ class Source:
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}).json()
         if res["gmetadata"][0]["expunged"]:
             raise RuntimeError(f"{res['gmetadata'][0]['title']} was delete from ehentai")
+        tags = res["gmetadata"][0]["tags"]
+        tags.append("category:" + res["gmetadata"][0]["category"].lower().replace(" ",""))
         return {"id": ids, "title": res["gmetadata"][0]["title"], "pagecount": int(res["gmetadata"][0]["filecount"]),
-                "tags": res["gmetadata"][0]["tags"], "cover": {"url": res["gmetadata"][0]["thumb"], "headers": {}}}
+                "tags": tags, "cover": {"url": res["gmetadata"][0]["thumb"], "headers": {}}}
 
     def get_pages(self, ids: str) -> dict:
         return {}

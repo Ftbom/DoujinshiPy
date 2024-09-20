@@ -4,6 +4,10 @@ import json
 import requests
 from lib.database import SourceType
 
+MIXED_TAGS = ['kodomo doushi', 'animal on animal', 'body swap', 'multimouth blowjob', 'multiple handjob', 'frottage', 'multiple assjob',
+              'multiple footjob', 'nudism', 'ffm threesome', 'gang rape', 'group', 'mmf threesome', 'mmt threesome', 'mtf threesome',
+              'oyakodon', 'shimaidon', 'ttm threesome', 'twins', 'incest', 'inseki', 'low incest']
+
 class Source:
     TYPE = SourceType.web
     SLEEP = 0.5
@@ -87,8 +91,32 @@ class Source:
                            "Referer": f"https://hitomi.la/doujinshi/{id}.html"})
         data = json.loads(res.content[18 :])
         tags = []
+        tags.append("category:" + data["type"])
+        if not data["characters"] == None:
+            for i in data["characters"]:
+                tags.append("character:" + i["character"])
+        if not data["language"] == None:
+            tags.append("language:" + data["language"])
+        if not data["artists"] == None:
+            for i in data["artists"]:
+                tags.append("artist:" + i["artist"])
+        if not data["parodys"] == None:
+            for i in data["parodys"]:
+                tags.append("parody:" + i["parody"])
+        if not data["groups"] == None:
+            for i in data["groups"]:
+                tags.append("group:" + i["group"])
         for tag in data["tags"]:
-            tags.append(tag["tag"])
+            if "female" in tag:
+                if tag["female"] == "1":
+                    tags.append("female:" + tag["tag"])
+                else:
+                    tags.append("male:" + tag["tag"])
+            else:
+                if tag["tag"] in MIXED_TAGS:
+                    tags.append("mixed:" + tag["tag"])
+                else:
+                    tags.append("other:" + tag["tag"])
         return {"id": data["id"], "title": data["title"], "pagecount": len(data["files"]), "tags": tags,
                 "cover": {"url": self.__get_thumbnail(data["files"][0], data["id"]), "headers": {"Referer": f"https://hitomi.la/doujinshi/{id}.html"}}}
 

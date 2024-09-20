@@ -20,4 +20,6 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
                 json = {"method": "gdata", "gidlist": [[int(ids[0]), ids[1]]], "namespace": 1},
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"}).json()
     time.sleep(0.8)
-    return res["gmetadata"][0]["tags"]
+    tags = res["gmetadata"][0]["tags"]
+    tags.append("category:" + res["gmetadata"][0]["category"].lower().replace(" ",""))
+    return tags

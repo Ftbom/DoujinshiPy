@@ -3,6 +3,12 @@ import time
 import requests
 from lib.database import Doujinshi
 
+MIXED_TAGS = ['kodomo doushi', 'animal on animal', 'body swap', 'multimouth blowjob', 'multiple handjob', 'frottage', 'multiple assjob',
+              'multiple footjob', 'nudism', 'ffm threesome', 'gang rape', 'group', 'mmf threesome', 'mmt threesome', 'mtf threesome',
+              'oyakodon', 'shimaidon', 'ttm threesome', 'twins', 'incest', 'inseki', 'low incest']
+CATEGORIES_TRANS = {'manga': 'manga', 'doujin': 'doujinshi', 'artist cg': 'artistcg', 'game cg': 'gamecg', 'non-hentai': 'non-h',
+                    'western': 'western'}
+
 def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
     if url == None:
         name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
@@ -16,6 +22,11 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
     res = requests.post(url, proxies = proxy, json = json).json()
     data = res[0]
     tags = []
+    if "category" in data:
+        try:
+            tags.append("category:" + CATEGORIES_TRANS[data["category"]])
+        except:
+            pass
     if "language" in data:
         tags.append("language:" + data["language"])
     if "circles" in data:
@@ -38,6 +49,9 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
             tags.append("male:" + i)
     if "otherTags" in data:
         for i in data["otherTags"]:
-            tags.append("other:" + i)
+            if i in MIXED_TAGS:
+                tags.append("mixed:" + i)
+            else:
+                tags.append("other:" + i)
     time.sleep(0.5)
     return tags

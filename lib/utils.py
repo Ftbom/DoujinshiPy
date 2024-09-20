@@ -53,11 +53,14 @@ def get_ehtag_database(proxy):
         content = requests.get(download_url, proxies = proxy).content
         json_data = json.loads(content)
         data = {}
-        for t in json_data["data"][2 :]:
+        for t in json_data["data"][1 :]:
             data_content = {}
             for i in t["data"].keys():
                 data_content[i] = t["data"][i]["name"]
-            data[t["namespace"]] = data_content
+            if t["namespace"] == "reclass":
+                data["category"] = data_content
+            else:
+                data[t["namespace"]] = data_content
         with open(f".data/tag_database.{release_tag_name}.json", "wb") as f:
             f.write(json.dumps(data).encode("utf-8"))
         return data
