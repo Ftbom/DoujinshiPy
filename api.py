@@ -286,6 +286,20 @@ def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
     except:
         return JSONResponse({"error": f"fail to get pages of doujinshi {id}"}, status_code = 500)
 
+@app.get("/doujinshi/{id}/pageinfo/{num}")
+def get_doujinshi_pageinfo_by_number(id: str, num: int, token: str = Depends(oauth2)):
+    verify_token(token)
+    # 需逐页爬取且未设置页面代理时
+    try:
+        info = get_page_info(app_state, id, num)
+        if info == -1:
+            return JSONResponse({"error": f"doujinshi {id} not exists or source not enabled"}, status_code = 404)
+        elif info == 0:
+            return JSONResponse({"error": f"doujinshi {id} not contain the {num} page"}, 404)
+        return {"msg": "success", "data": info}
+    except:
+        return JSONResponse({"error": f"fail to get pageinfo of doujinshi {id}"}, status_code = 500)
+
 @app.get("/doujinshi/{id}/page/{num}")
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
     verify_token(token)

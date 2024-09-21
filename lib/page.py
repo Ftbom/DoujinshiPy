@@ -1,6 +1,7 @@
 import os
 import uuid
 import time
+import json
 import py7zr
 import shutil
 import rarfile
@@ -115,7 +116,10 @@ def get_page_urls(app_state, id: str) -> list[str]:
         pagecount = get_page_count(app_state["sources"], session, result) # 获取页面数目
         page_list = []
         for i in range(pagecount):
-            page_list.append(f"/doujinshi/{str(result.id)}/page/{i}")
+            if (result.type == SourceType.web) and (not app_state["settings"]["proxy_webpage"]):
+                page_list.append(f"/doujinshi/{str(result.id)}/pageinfo/{i}")
+            else:
+                page_list.append(f"/doujinshi/{str(result.id)}/page/{i}")
         return page_list
 
 def cache_page(client, type, id, num, arg1, arg2, arg3 = None): # 缓存页码
@@ -380,3 +384,38 @@ def read_pages(app_state, id: str) -> None:
         elif result.type == SourceType.local:
             local_page_read(app_state, result)
         client.delete(f"{id}_read") # 缓存结束，重置缓存状态
+
+def get_page_info(app_state, id: str, num: int) -> dict:
+    client = app_state["redis_client"]
+    engine = app_state["database_engine"]
+    sources = app_state["sources"]
+    with Session(engine) as session:
+        try:
+            uid = uuid.UUID(id)
+        except:
+            # id不存在
+            return -1
+        result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
+        if result == None:
+            # id不存在
+            return -1
+        if not result.source in sources:
+            # 源未启用
+            return -1
+        with client.lock(f"{str(uid)}_pages_lock", blocking = True, blocking_timeout = 10):
+            pages = client.get(f"{str(uid)}_pages")
+            if pages == None:
+                pages = sources[result.source].get_page_urls(result.identifier, num)
+                client.setex(f"{str(uid)}_pages", 100, json.dumps(pages))
+            else:
+                pages_dict = json.loads(pages)
+                pages = {}
+                for i in pages_dict.keys():
+                    pages[int(i)] = pages_dict[i]
+                if not num in pages:
+                    pages.update(sources[result.source].get_page_urls(result.identifier, num))
+                    client.setex(f"{str(uid)}_pages", 100, json.dumps(pages))
+    if not num in pages:
+        return 0
+    return sources[result.source].get_img_url(pages[num])
+        
