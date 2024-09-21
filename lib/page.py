@@ -406,7 +406,7 @@ def get_page_info(app_state, id: str, num: int) -> dict:
             pages = client.get(f"{str(uid)}_pages")
             if pages == None:
                 pages = sources[result.source].get_page_urls(result.identifier, num)
-                client.setex(f"{str(uid)}_pages", 100, json.dumps(pages))
+                client.setex(f"{str(uid)}_pages", 3000, json.dumps(pages))
             else:
                 pages_dict = json.loads(pages)
                 pages = {}
@@ -414,7 +414,7 @@ def get_page_info(app_state, id: str, num: int) -> dict:
                     pages[int(i)] = pages_dict[i]
                 if not num in pages:
                     pages.update(sources[result.source].get_page_urls(result.identifier, num))
-                    client.setex(f"{str(uid)}_pages", 100, json.dumps(pages))
+                    client.setex(f"{str(uid)}_pages", 3000, json.dumps(pages))
     if not num in pages:
         return 0
     return sources[result.source].get_img_url(pages[num])
