@@ -151,9 +151,9 @@ class Source:
         res = self.__session.get(f"{self.__base_url}/g/{id_str}/?p={str(page_list)}")
         self.__error_handle(res)
         soup = BeautifulSoup(res.content, "html.parser")
-        items = soup.find("div", id = "gdt").find_all(class_ = "gdtm")
+        items = soup.find("div", id = "gdt").find_all("a")
         for i in range(len(items)):
-            result[page_list * 40 + i] = items[i].div.a.attrs["href"]
+            result[page_list * 40 + i] = items[i].attrs["href"]
         return result
 
     def get_img_url(self, url: str) -> dict:

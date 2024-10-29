@@ -304,21 +304,11 @@ def get_doujinshi_pageinfo_by_number(id: str, num: int, token: str = Depends(oau
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
     verify_token(token)
     client = app_state["redis_client"]
-    new_thread = False
-    with client.lock(f"{id}_read_lock", blocking = True, blocking_timeout = 5):
-        # 获取缓存线程状态，防止重复创建线程
-        read_thread = client.get(f"{id}_read")
-        if read_thread == None:
-            # 先设置状态，防止锁释放后其他请求创建线程
-            client.set(f"{id}_read", 0)
-            threading.Thread(target = read_pages, args = (app_state, id)).start()
-            new_thread = True
-    if new_thread or (read_thread == '0'):
-        time.sleep(0.2) # 若已创建线程，或缓存线程还未设置状态，等待并重新获取状态
-        read_thread = client.get(f"{id}_read")
-    if read_thread == '-1':
-        # client.delete(f"{id}_read") # reset
-        return JSONResponse({"error": f"doujinshi {id} does not exist or source not enabled"}, status_code = 404)
+    # TODO: 判断id是否存在
+    # return JSONResponse({"error": f"doujinshi {id} does not exist or source not enabled"}, status_code = 404)
+    if not client.sismember("cur_read", id):
+        client.sadd("cur_read", id) # 先设置状态，防止其他请求创建线程
+        threading.Thread(target = read_pages, args = (app_state, id)).start()
     # 文件已存在则无需后续操作
     file_path = f".data/cache/{id}/{num}.jpg"
     if os.path.exists(file_path): # 文件已存在，返回文件
@@ -328,40 +318,18 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
         else:
             if os.path.getsize(file_path) > 0:
                 return FileResponse(file_path)
-    try:
-        count = 0
-        while count < 40:
-            # 等待20s，若页加载状态被释放，设置页加载状态（告诉缓存线程该加载的页码）
-            num_status = client.get(f"{id}_page")
-            if num_status == None:
-                with client.lock(f"{id}_page_lock", blocking = True, blocking_timeout = 20):
-                   # 再获取一次状态，防止两次请求同时等待锁释放进入状态设置，并因此先后设置状态，导致头一次设置被覆盖
-                   if client.get(f"{id}_page") != None:
-                       continue
-                   client.set(f"{id}_page", num)
-                break
-            time.sleep(0.5)
-            count = count + 1
-        if count >= 20: # 超时
-            return JSONResponse({"error": "busy to load pages, please try later"}, status_code = 503)
-    except:
-        return JSONResponse({"error": "busy to load pages, please try later"}, status_code = 503)
-    count = 0
-    while count < 20: # 等待10s，等待页码缓存
-        # 获取页码状态
-        page_status = client.get(f"{id}_{num}")
-        if page_status == '-1':
-            client.delete(f"{id}_{num}") # 重置
-            return JSONResponse({"error": f"doujinshi {id} not contain the {num} page"}, 404)
-        if page_status == '0':
-            client.delete(f"{id}_{num}") # 重置
-            return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500)
-        if os.path.exists(file_path): # 文件已存在，返回文件
-            if os.path.getsize(file_path) > 0:
-                return FileResponse(file_path)
-        count = count + 1
-        time.sleep(0.5)
-    return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500) # 超时
+    client.lpush(f"{id}_pages", num)
+    page_status = client.brpop(f"{id}_{num}", timeout = 90) # 等待90s
+    if page_status == None:
+        return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500) # 超时
+    if page_status[1] == "-1":
+        return JSONResponse({"error": f"doujinshi {id} not contain the {num} page"}, 404) # 页码不存在
+    elif page_status[1] == "0":
+        return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500)
+    if os.path.exists(file_path): # 返回文件
+        if os.path.getsize(file_path) > 0:
+            return FileResponse(file_path)
+    return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500)
 
 @app.get("/doujinshi/{id}/thumbnail")
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
