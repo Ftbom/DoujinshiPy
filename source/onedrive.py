@@ -2,7 +2,7 @@ import os
 import time
 import json
 import requests
-from lib.database import SourceType
+from lib.utils import SourceType
 from msal import ConfidentialClientApplication
 
 class Source:

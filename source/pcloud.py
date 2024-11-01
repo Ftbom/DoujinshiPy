@@ -1,7 +1,7 @@
 import time
 import requests
 from hashlib import sha1
-from lib.database import SourceType
+from lib.utils import SourceType
 
 class Source:
     TYPE = SourceType.cloud

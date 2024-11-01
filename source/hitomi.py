@@ -2,7 +2,7 @@ import re
 import time
 import json
 import requests
-from lib.database import SourceType
+from lib.utils import SourceType
 
 MIXED_TAGS = ['kodomo doushi', 'animal on animal', 'body swap', 'multimouth blowjob', 'multiple handjob', 'frottage', 'multiple assjob',
               'multiple footjob', 'nudism', 'ffm threesome', 'gang rape', 'group', 'mmf threesome', 'mmt threesome', 'mtf threesome',

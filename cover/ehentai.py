@@ -2,7 +2,7 @@ import re
 import time
 import requests
 from bs4 import BeautifulSoup
-from lib.database import Doujinshi
+from lib.utils import Doujinshi
 
 def search_name(name: str, proxy: dict) -> str:
     res = requests.get(f"https://e-hentai.org/?f_search={name}", proxies = proxy,

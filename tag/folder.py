@@ -1,5 +1,5 @@
 import os
-from lib.database import Doujinshi, SourceType
+from lib.utils import Doujinshi, SourceType
 
 def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list[str]:
     if not doujinshi.type == SourceType.local:

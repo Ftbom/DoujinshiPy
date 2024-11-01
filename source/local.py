@@ -1,5 +1,5 @@
 from pathlib import Path
-from lib.database import SourceType
+from lib.utils import SourceType
 
 class Source:
     TYPE = SourceType.local

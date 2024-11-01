@@ -6,7 +6,7 @@ import zipfile
 import rarfile
 import remotezip
 from PIL import Image
-from lib.database import Doujinshi, SourceType
+from lib.utils import Doujinshi, SourceType
 
 def generate_thumbnail(file_bytes: io.BytesIO, thumb_path: str) -> bytes:
     image = Image.open(file_bytes)

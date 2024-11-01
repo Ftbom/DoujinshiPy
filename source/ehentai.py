@@ -3,7 +3,7 @@ import time
 import pickle
 import requests
 from bs4 import BeautifulSoup
-from lib.database import SourceType
+from lib.utils import SourceType
 
 class Source:
     TYPE = SourceType.web

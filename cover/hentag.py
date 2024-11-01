@@ -1,7 +1,7 @@
 import re
 import time
 import requests
-from lib.database import Doujinshi
+from lib.utils import Doujinshi
 
 def get_cover(source, proxy, doujinshi: Doujinshi, url) -> None:
     if url == None:

@@ -2,48 +2,16 @@ import os
 import redis
 import importlib
 import threading
-from enum import Enum
 from lib.scan import *
 from lib.page import *
 from lib.utils import *
 from lib.batch import *
 from lib.database import *
-from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, status
 from lib.utils import get_file_infos
 from sqlmodel import SQLModel, create_engine
 from starlette.responses import FileResponse, JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-
-class PasswdAuth(BaseModel):
-    passwd: str
-
-class StartScan(BaseModel):
-    start: bool
-    source_name: str
-
-class AddLibrary(BaseModel):
-    source_name: str
-    target: list[str]
-    replace: bool
-
-class OperationType(Enum):
-    cover = "cover"
-    tag = "tag"
-    group = "group"
-
-class BatchOperation(BaseModel):
-    operation: OperationType
-    name: str
-    target: list
-    replace: bool
-
-class GroupName(BaseModel):
-    name: str
-
-class EditMetaData(BaseModel):
-    title: str
-    tag: list[str]
 
 app = FastAPI()
 
@@ -199,13 +167,13 @@ def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
 @app.get("/group")
 def get_all_groups(token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_group_list(app_state["database_engine"])}
+    return {"msg": "success", "data": get_group_list(app_state["redis_client"])}
 
 @app.get("/group/{id}")
 def get_doujinshi_by_group_id(id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        result = get_doujinshi_by_group(app_state["database_engine"], id)
+        result = get_doujinshi_by_group(app_state["redis_client"], id, app_state["settings"]["tag_translate"])
         if result == {}:
             return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
@@ -216,7 +184,7 @@ def get_doujinshi_by_group_id(id: str, token: str = Depends(oauth2)) -> dict:
 def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        if delete_group_by_id(app_state["database_engine"], id):
+        if delete_group_by_id(app_state["redis_client"], id):
             return {"msg": f"success to delete group {id}"}
         else:
             return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
@@ -227,7 +195,7 @@ def delete_group(id: str, token: str = Depends(oauth2)) -> dict:
 def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        res = rename_group_by_id(app_state["database_engine"], id, group_name.name)
+        res = rename_group_by_id(app_state["redis_client"], id, group_name.name)
         if res == 1:
             return {"msg": f"success to rename group {id}"}
         elif res == 0:
@@ -240,13 +208,13 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
 @app.get("/doujinshi")
 def get_all_doujinshis(random: Union[int, None] = None, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_doujinshi_list(app_state["database_engine"], random, app_state["settings"]["tag_translate"])}
+    return {"msg": "success", "data": get_doujinshi_list(app_state["redis_client"], random, app_state["settings"]["tag_translate"])}
 
 @app.get("/doujinshi/{id}/metadata")
 def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        result = get_doujinshi_by_id(app_state["database_engine"], id, app_state["settings"]["tag_translate"])
+        result = get_doujinshi_by_id(app_state["redis_client"], id, app_state["settings"]["tag_translate"])
         if result == {}:
             return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
@@ -257,7 +225,7 @@ def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
 def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        if set_metadata(app_state["database_engine"], id, edit):
+        if set_metadata(app_state["redis_client"], id, edit):
             return {"msg": f"success to set metadata of doujinshi {id}"}
         else:
             return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
@@ -268,7 +236,7 @@ def set_doujinshi_metadata(id: str, edit: EditMetaData, token: str = Depends(oau
 def delete_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        if delete_metadata(app_state["database_engine"], id):
+        if delete_metadata(app_state["redis_client"], id):
             return {"msg": f"success to delete metadata of doujinshi {id}"}
         else:
             return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
@@ -304,8 +272,8 @@ def get_doujinshi_pageinfo_by_number(id: str, num: int, token: str = Depends(oau
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
     verify_token(token)
     client = app_state["redis_client"]
-    # TODO: 判断id是否存在
-    # return JSONResponse({"error": f"doujinshi {id} does not exist or source not enabled"}, status_code = 404)
+    if client.sismember("data:doujinshis", id) == False:
+        return JSONResponse({"error": f"doujinshi {id} does not exist or source not enabled"}, status_code = 404)
     if not client.sismember("cur_read", id):
         client.sadd("cur_read", id) # 先设置状态，防止其他请求创建线程
         threading.Thread(target = read_pages, args = (app_state, id)).start()
@@ -348,7 +316,7 @@ def search(query: str, source_name: str = "", tag: str = "", group: str = "", to
     for i in range(len(tag_list)):
         tag_list[i] = tag_list[i].strip(" ")
     tag_list = [item for item in tag_list if item != ""]
-    return {"msg": "success", "data": search_doujinshi(app_state["database_engine"],
+    return {"msg": "success", "data": search_doujinshi(app_state["redis_client"],
                                             (query, tag_list, group, source_name), app_state["settings"]["tag_translate"])}
 
 @app.get("/web/{source_name}/search")

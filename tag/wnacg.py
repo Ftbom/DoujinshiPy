@@ -2,7 +2,7 @@ import re
 import time
 import requests
 from bs4 import BeautifulSoup
-from lib.database import Doujinshi
+from lib.utils import Doujinshi
 
 def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list[str]:
     if url == None:

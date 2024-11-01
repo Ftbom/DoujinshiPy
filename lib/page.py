@@ -1,5 +1,4 @@
 import os
-import uuid
 import time
 import json
 import py7zr
@@ -9,8 +8,8 @@ import zipfile
 import logging
 import requests
 import remotezip
+from lib.utils import Doujinshi, SourceType, doujinshi_from_json, set_pagecount_of_doujinshis
 from sqlmodel import Session, select
-from lib.database import Doujinshi, SourceType
 
 def archive_filelist(archive_file, sort: bool, file_type: str) -> list:
     filelist = archive_file.namelist()
@@ -49,51 +48,45 @@ def cloud_pagecount(download_info: dict) -> int:
     zip_file.close()
     return len(filelist)
 
-def get_page_count(sources, session, doujinshi: Doujinshi) -> int:
-    if not doujinshi.pagecount == None: # 数据库已储存，直接返回
-        return doujinshi.pagecount
-    if doujinshi.type == SourceType.web:
-        raise RuntimeError(f"fail to get page count of doujinshi {str(doujinshi.id)}")
+def get_page_count(app_state, doujinshi: dict, id: str) -> int:
+    if doujinshi["type"] == "web":
+        raise RuntimeError(f"fail to get page count of doujinshi {id}")
+    sources = app_state["sources"]
+    client = app_state["redis_client"]
     # 数据库未储存，读取并储存
     try:
-        file_identifier = sources[doujinshi.source].get_file(doujinshi.identifier)
-        if doujinshi.type == SourceType.local:
+        file_identifier = sources[doujinshi["source"]].get_file(doujinshi["identifier"])
+        if doujinshi["type"] == "local":
             pagecount = local_pagecount(file_identifier)
-        elif doujinshi.type == SourceType.cloud:
+        elif doujinshi["type"] == "cloud":
             pagecount = cloud_pagecount(file_identifier)
     except Exception as e:
-        logging.error(f"fail to get pagecount of doujinshi {str(doujinshi.id)}, error message: {e}")
+        logging.error(f"fail to get pagecount of doujinshi {id}, error message: {e}")
         return 0
-    doujinshi.pagecount = pagecount
-    session.add(doujinshi)
-    session.commit()
-    logging.info(f"save pagecount of doujinshi {str(doujinshi.id)} to database")
+    set_pagecount_of_doujinshis(client, id, pagecount)
+    logging.info(f"save pagecount of doujinshi {id} to database")
     return pagecount
 
 def get_page_urls(app_state, id: str) -> list[str]:
-    engine = app_state["database_engine"]
-    with Session(engine) as session:
-        try:
-            uid = uuid.UUID(id)
-        except:
-            return []
-        result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
-        if result == None:
-            return []
-        if not result.source in app_state["sources"]:
-            return []
-        if (result.type == SourceType.web) and (not app_state["settings"]["proxy_webpage"]):
-            pages_result = app_state["sources"][result.source].get_pages(result.identifier) # 若未设置代理图片，获取网页源图片
-            if (pages_result != []) and (pages_result != {}):
-                return pages_result
-        pagecount = get_page_count(app_state["sources"], session, result) # 获取页面数目
-        page_list = []
-        for i in range(pagecount):
-            if (result.type == SourceType.web) and (not app_state["settings"]["proxy_webpage"]):
-                page_list.append(f"/doujinshi/{str(result.id)}/pageinfo/{i}")
-            else:
-                page_list.append(f"/doujinshi/{str(result.id)}/page/{i}")
-        return page_list
+    client = app_state["redis_client"]
+    result = client.hgetall(f"doujinshi:{id}")
+    if result == {}:
+        return []
+    if (result["type"] == "web") and (not app_state["settings"]["proxy_webpage"]):
+        pages_result = app_state["sources"][result["source"]].get_pages(result["identifier"]) # 若未设置代理图片，获取网页源图片
+        if (pages_result != []) and (pages_result != {}):
+            return pages_result
+    if result["pagecount"] == "-1":
+        pagecount = get_page_count(app_state, result, id) # 获取页面数目
+    else:
+        pagecount = int(result["pagecount"])
+    page_list = []
+    for i in range(pagecount):
+        if (result["type"] == "web") and (not app_state["settings"]["proxy_webpage"]):
+            page_list.append(f"/doujinshi/{id}/pageinfo/{i}")
+        else:
+            page_list.append(f"/doujinshi/{id}/page/{i}")
+    return page_list
 
 def cache_page(client, type, id, num, arg1, arg2, arg3 = None): # 缓存页码
     page_path = f".data/cache/{id}/{num}.jpg"
@@ -165,7 +158,7 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
         pagecount = len(page_urls["urls"])
     id = str(doujinshi.id)
     while True:
-        num_status = client.brpop(f"{id}_pages", timeout = 3000)
+        num_status = client.brpop(f"{id}_pages", timeout = 900)
         if num_status == None:
             client.srem("cur_read", id)
             break
@@ -173,7 +166,7 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
             num = int(num_status[1])
             if num >= pagecount or num < 0:
                 client.lpush(f"{id}_{num}", -1) # 页码状态
-                client.expire(f"{id}_{num}", 3000)
+                client.expire(f"{id}_{num}", 900)
                 continue
             if single_page:
                 if not num in page_urls:
@@ -189,7 +182,7 @@ def web_page_read(app_state, doujinshi: Doujinshi) -> None:
 
 def archive_cache_page(client, type: SourceType, id: str, pagecount: int, sleep_time: int, arg1, arg2, arg3 = None):
     while True:
-        num_status = client.brpop(f"{id}_pages", timeout = 3000)
+        num_status = client.brpop(f"{id}_pages", timeout = 900)
         if num_status == None:
             client.srem("cur_read", id)
             break
@@ -197,7 +190,7 @@ def archive_cache_page(client, type: SourceType, id: str, pagecount: int, sleep_
             num = int(num_status[1])
             if num >= pagecount or num < 0:
                 client.lpush(f"{id}_{num}", -1) # 页码状态
-                client.expire(f"{id}_{num}", 3000)
+                client.expire(f"{id}_{num}", 900)
                 continue
             cache_page(client, type, id, num, arg1, arg2, arg3)
             time.sleep(sleep_time)
@@ -248,63 +241,35 @@ def local_page_read(app_state, doujinshi: Doujinshi) -> None:
 
 def read_pages(app_state, id: str) -> None:
     client = app_state["redis_client"]
-    engine = app_state["database_engine"]
-    sources = app_state["sources"]
-    with Session(engine) as session:
-        try:
-            uid = uuid.UUID(id)
-        except:
-            # 设置缓存状态，id不存在
-            client.set(f"{id}_read", -1)
-            return
-        result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
-        if result == None:
-            client.set(f"{id}_read", -1)
-            return
-        if not result.source in sources:
-            client.set(f"{id}_read", -1)
-            return
-        client.set(f"{id}_read", 1)
-        # 开始缓存页面
-        if result.type == SourceType.web:
-            web_page_read(app_state, result)
-        elif result.type == SourceType.cloud:
-            cloud_page_read(app_state, result)
-        elif result.type == SourceType.local:
-            local_page_read(app_state, result)
-        client.delete(f"{id}_read") # 缓存结束，重置缓存状态
+    result = doujinshi_from_json(id, client.hgetall(f"doujinshi:{id}"))
+    # 开始缓存页面
+    if result.type == SourceType.web:
+        web_page_read(app_state, result)
+    elif result.type == SourceType.cloud:
+        cloud_page_read(app_state, result)
+    elif result.type == SourceType.local:
+        local_page_read(app_state, result)
 
 def get_page_info(app_state, id: str, num: int) -> dict:
     client = app_state["redis_client"]
-    engine = app_state["database_engine"]
+    result = client.hgetall(f"doujinshi:{id}")
+    if result == {}:
+        return -1
     sources = app_state["sources"]
-    with Session(engine) as session:
-        try:
-            uid = uuid.UUID(id)
-        except:
-            # id不存在
-            return -1
-        result = session.exec(select(Doujinshi).where(Doujinshi.id == uid)).first()
-        if result == None:
-            # id不存在
-            return -1
-        if not result.source in sources:
-            # 源未启用
-            return -1
-        with client.lock(f"{str(uid)}_pages_lock", blocking = True, blocking_timeout = 10):
-            pages = client.get(f"{str(uid)}_pages")
-            if pages == None:
-                pages = sources[result.source].get_page_urls(result.identifier, num)
-                client.setex(f"{str(uid)}_pages", 3000, json.dumps(pages))
-            else:
-                pages_dict = json.loads(pages)
-                pages = {}
-                for i in pages_dict.keys():
-                    pages[int(i)] = pages_dict[i]
-                if not num in pages:
-                    pages.update(sources[result.source].get_page_urls(result.identifier, num))
-                    client.setex(f"{str(uid)}_pages", 3000, json.dumps(pages))
+    with client.lock(f"{id}_pages_lock", blocking = True, blocking_timeout = 10):
+        pages = client.get(f"{id}_pages")
+        if pages == None:
+            pages = sources[result["source"]].get_page_urls(result["identifier"], num)
+            client.setex(f"{id}_pages", 900, json.dumps(pages))
+        else:
+            pages_dict = json.loads(pages)
+            pages = {}
+            for i in pages_dict.keys():
+                pages[int(i)] = pages_dict[i]
+            if not num in pages:
+                pages.update(sources[result["source"]].get_page_urls(result["identifier"], num))
+                client.setex(f"{id}_pages", 900, json.dumps(pages))
     if not num in pages:
         return 0
-    return sources[result.source].get_img_url(pages[num])
+    return sources[result["source"]].get_img_url(pages[num])
         

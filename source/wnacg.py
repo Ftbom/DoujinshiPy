@@ -1,5 +1,5 @@
 import requests
-from lib.database import SourceType
+from lib.utils import SourceType
 from bs4 import BeautifulSoup
 
 class Source:
