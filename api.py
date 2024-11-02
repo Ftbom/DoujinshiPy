@@ -9,7 +9,6 @@ from lib.batch import *
 from lib.database import *
 from fastapi import FastAPI, HTTPException, Depends, status
 from lib.utils import get_file_infos
-from sqlmodel import SQLModel, create_engine
 from starlette.responses import FileResponse, JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 
@@ -20,11 +19,8 @@ oauth2 = OAuth2PasswordBearer(tokenUrl = "token")
 app_state = {
     "settings": load_settings(),
     "sources": load_sources(), # 从配置文件读取源配置
-    "database_engine": create_engine("sqlite:///.data/database.db"), # 加载sqlite数据库
     "redis_client": redis.Redis(decode_responses = True) # 创建redis客户端
 }
-
-SQLModel.metadata.create_all(app_state["database_engine"])
 
 # 自定义 token 验证函数
 def verify_token(token: str):

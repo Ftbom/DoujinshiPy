@@ -1,7 +1,7 @@
 import os
 import logging
 from lib.utils import (Group, add_group_to_redis, doujinshi_from_json,
-            get_all_values_from_set, set_group_of_doujinshis, set_metadata_of_doujinshis)
+            get_all_values_from_set, set_group_of_doujinshi, set_metadata_of_doujinshi)
 
 def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old: bool) -> None:
     client = app_state["redis_client"]
@@ -26,7 +26,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
             if len(id) == 0:
                 continue # 无数据
             id = str(id[0])
-        if not set_group_of_doujinshis(client, group_id, id, replace_old):
+        if not set_group_of_doujinshi(client, group_id, id, replace_old):
             logging.warning(f"don't find id {id}, skip setting group")
         else:
             logging.info(f"set group for {id}")
@@ -97,7 +97,7 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
             try:
                 new_tags = func(app_state["sources"][result["source"]], app_state["settings"]["proxy"],
                                 doujinshi_from_json(id, result), url) # 获取tag的函数
-                set_metadata_of_doujinshis(client, id, new_tags, replace_old)
+                set_metadata_of_doujinshi(client, id, new_tags, replace_old)
                 logging.info(f"get tag for {id}")
             except:
                 logging.error(f"failed to get tag for {id}")

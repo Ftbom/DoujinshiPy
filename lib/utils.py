@@ -1,14 +1,16 @@
 import os
+import time
 import uuid
 import json
 import shutil
 import requests
 import importlib
+import threading
 from enum import Enum
 from enum import Enum
 from typing import Union
 from pydantic import BaseModel
-from sqlmodel import Session, select, Field, SQLModel
+from sqlmodel import SQLModel, Session, select, Field, create_engine
 
 class PasswdAuth(BaseModel):
     passwd: str
@@ -99,6 +101,50 @@ def doujinshi_from_json(id, result: dict) -> Doujinshi:
                           type = type, source = result["source"])
     return doujinshi
 
+def save_modified_to_sqlite(client) -> None:
+    def save_group(session, client, id):
+        data = client.get(f"group:{id}")
+        if data == None:
+            item = session.get(Group, uuid.UUID(id))
+            if item:
+                session.delete(item)
+        else:
+            session.merge(Group(id = uuid.UUID(id), name = data))
+    def save_doujinshi(session, client, id):
+        data = client.hgetall(f"doujinshi:{id}")
+        if data == {}:
+            item = session.get(Doujinshi, uuid.UUID(id))
+            if item:
+                session.delete(item)
+        else:
+            session.merge(doujinshi_from_json(id, data))
+    time.sleep(300)
+    with client.lock("modified_lock", blocking = True, blocking_timeout = 10):
+        modified_ids = get_all_values_from_set(client, "modified")
+        client.delete("modified")
+    # 保存数据到sqlite
+    engine = create_engine("sqlite:///.data/database.db")
+    if not os.path.exists(".data/database.db"):
+        SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        for _id in modified_ids:
+            if _id.startswith("group_"):
+                _id = _id[6 :]
+                save_group(session, client, _id)
+            elif _id.startswith("doujinshi_"):
+                _id = _id[10 :]
+                save_doujinshi(session, client, _id)
+        session.commit()
+
+def mark_modified(client, id: str, group: bool = False) -> None:
+    with client.lock("modified_lock", blocking = True, blocking_timeout = 10):
+        if not client.exists("modified"):
+            threading.Thread(target = save_modified_to_sqlite, args = (client,)).start()
+        if group:
+            client.sadd("modified", f"group_{id}")
+        else:
+            client.sadd("modified", f"doujinshi_{id}")
+
 # 获取set的所有子项
 def get_all_values_from_set(client, key):
     cursor = 0
@@ -112,7 +158,7 @@ def get_all_values_from_set(client, key):
     return results
 
 # 添加doujinshi到redis
-def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False) -> None:
+def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, backup_sql = True) -> None:
     if doujinshi.pagecount == None:
         pagecount = -1
     else:
@@ -133,6 +179,8 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False) -> N
         for g in doujinshi.groups.split("|"):
             if not g == "":
                 client.sadd(f"data:group_{g}", did)
+    if backup_sql:
+        mark_modified(client, did)
 
 def delete_id_from_titles(client, id, title) -> None:
     title_data = client.hget("data:titles", title)
@@ -163,9 +211,10 @@ def delete_doujinshi_from_redis(client, id, title = None, groups = None) -> None
     for g in groups.split("|"):
         if not g == "":
             client.srem(f"data:group_{g}", id)
+    mark_modified(client, id)
 
 # 设置doujinshi的group
-def set_group_of_doujinshis(client, gid: str, target_id, replace_old: bool = False) -> bool:
+def set_group_of_doujinshi(client, gid: str, target_id, replace_old: bool = False) -> bool:
     groups = client.hget(f"doujinshi:{target_id}", "groups")
     if groups == None:
         return False
@@ -176,12 +225,14 @@ def set_group_of_doujinshis(client, gid: str, target_id, replace_old: bool = Fal
         groups.append(gid)
     client.hset(f"doujinshi:{target_id}", "groups", "|".join(groups).strip("|"))
     client.sadd(f"data:group_{gid}", target_id)
+    mark_modified(client, target_id)
     return True
 
-def set_pagecount_of_doujinshis(client, id: str, pagecount: int) -> bool:
+def set_pagecount_of_doujinshi(client, id: str, pagecount: int) -> bool:
     client.hset(f"doujinshi:{id}", "pagecount", pagecount)
+    mark_modified(client, id)
 
-def set_metadata_of_doujinshis(client, id: str, tags: list, replace_old: bool = False, title: str = None) -> bool:
+def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = False, title: str = None) -> bool:
     old_tags = client.hget(f"doujinshi:{id}", "tags")
     if old_tags == None:
         return False
@@ -198,19 +249,23 @@ def set_metadata_of_doujinshis(client, id: str, tags: list, replace_old: bool = 
         client.hset(f"doujinshi:{id}", "title", title)
         delete_id_from_titles(client, id, old_title)
         add_id_to_titles(client, id, title)
+    mark_modified(client, id)
     return True
 
 # 新建group
-def add_group_to_redis(client, group: Group) -> None:
+def add_group_to_redis(client, group: Group, backup_sql = True) -> None:
     gid = str(group.id)
     client.set(f"group:{gid}", group.name)
     client.sadd("data:groups", gid)
+    if backup_sql:
+        mark_modified(client, gid, True)
 
 def set_name_of_group(client, id: str, name) -> bool:
     for gid in get_all_values_from_set(client, "data:groups"):
         if name == client.get(f"group:{gid}"):
             return False
     client.set(f"group:{id}", name)
+    mark_modified(client, id, True)
     return True
 
 # 删除group
@@ -226,20 +281,24 @@ def delete_group_from_redis(client, id) -> None:
             if not g == id:
                 new_groups.append(g)
         client.hset(f"doujinshi:{_id}", "groups", "|".join(new_groups))
+        mark_modified(client, _id)
+    mark_modified(client, id, True)
 
 # 加载数据库到redis
 def load_database_to_redis(app_state) -> None:
+    if not os.path.exists(".data/database.db"):
+        return
     client = app_state["redis_client"]
-    engine = app_state["database_engine"]
+    engine = create_engine("sqlite:///.data/database.db")
     avaliable_sources = list(app_state["sources"].keys())
     with Session(engine) as session:
         results = session.exec(select(Doujinshi))
         for result in results:
             if result.source in avaliable_sources:
-                add_doujinshi_to_redis(client, result, True)
+                add_doujinshi_to_redis(client, result, True, False)
         results = session.exec(select(Group))
         for result in results:
-            add_group_to_redis(client, result)
+            add_group_to_redis(client, result, False)
 
 def get_cache_size() -> int:
     total_size = 0

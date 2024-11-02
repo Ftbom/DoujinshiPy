@@ -8,8 +8,7 @@ import zipfile
 import logging
 import requests
 import remotezip
-from lib.utils import Doujinshi, SourceType, doujinshi_from_json, set_pagecount_of_doujinshis
-from sqlmodel import Session, select
+from lib.utils import Doujinshi, SourceType, doujinshi_from_json, set_pagecount_of_doujinshi
 
 def archive_filelist(archive_file, sort: bool, file_type: str) -> list:
     filelist = archive_file.namelist()
@@ -63,7 +62,7 @@ def get_page_count(app_state, doujinshi: dict, id: str) -> int:
     except Exception as e:
         logging.error(f"fail to get pagecount of doujinshi {id}, error message: {e}")
         return 0
-    set_pagecount_of_doujinshis(client, id, pagecount)
+    set_pagecount_of_doujinshi(client, id, pagecount)
     logging.info(f"save pagecount of doujinshi {id} to database")
     return pagecount
 

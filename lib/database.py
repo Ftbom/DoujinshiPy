@@ -1,16 +1,8 @@
 import os
-import uuid
 import random
 import logging
-from sqlmodel import Session, select
-from lib.utils import get_all_values_from_set, delete_group_from_redis, set_name_of_group, set_metadata_of_doujinshis, delete_doujinshi_from_redis
-
-def get_all_doujinshis(client):
-    doujinshi_list = []
-    results = client.smembers("data:doujinshis")
-    for result in results:
-        doujinshi_list.append(client.hgetall(result))
-    return doujinshi_list
+from lib.utils import (get_all_values_from_set, delete_group_from_redis, set_name_of_group,
+                       set_metadata_of_doujinshi, delete_doujinshi_from_redis)
 
 def translate_tags(tags, tag_database):
     new_tags = []
@@ -116,7 +108,7 @@ def search_doujinshi(client, parameters, tag_database) -> dict:
     return doujinshi
 
 def set_metadata(client, id: str, metadata) -> bool:
-    if not set_metadata_of_doujinshis(client, id, metadata.tag, True, metadata.title):
+    if not set_metadata_of_doujinshi(client, id, metadata.tag, True, metadata.title):
         return False
     logging.info(f"set the metadata of doujinshi {id}")
     return True

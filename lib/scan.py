@@ -3,7 +3,6 @@ import time
 import logging
 import requests
 from lib.utils import Doujinshi, SourceType, add_doujinshi_to_redis, delete_doujinshi_from_redis, get_all_values_from_set
-from sqlmodel import Session, select
 
 def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_replace: bool) -> None:
     client = app_state["redis_client"]
