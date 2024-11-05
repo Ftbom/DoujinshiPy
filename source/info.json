@@ -5,6 +5,9 @@
     "onedrive": {
         "description": "Onedrive文件"
     },
+    "onedrive_appfolder": {
+        "description": "Onedrive文件（个人版appfolder）"
+    },
     "pcloud": {
         "description": "Pcloud文件"
     },
