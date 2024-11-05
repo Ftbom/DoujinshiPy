@@ -123,6 +123,16 @@ class Source:
 
 ## 源配置
 
+### onedrive
+
+云盘
+
+重定向链接：http://localhost:5000/getAToken
+
+```
+"name": {"type": "onedrive", config: {"id": "", "secret": "", "proxy": "", "path": ""}}
+```
+
 ### onedrive_appfolder
 
 云盘
