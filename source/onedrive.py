@@ -12,7 +12,11 @@ class Source:
     def __init__(self, config) -> None:
         self.__client_id = config["id"]
         self.__client_secret = config["secret"]
-        self.__appfolder = config["appfolder"]
+        self.__business = config["business"]
+        if self.__business:
+            self.__appfolder = False
+        else:
+            self.__appfolder = config["appfolder"]
         if not config["proxy"] == "":
             self.__proxies = {"http": config["proxy"], "https": config["proxy"]}
         else:
@@ -37,7 +41,10 @@ class Source:
             print("open this url in browser, and input the redirect url:")
             print(authorization_url)
             response_url = input()
-            authorization_code = response_url[response_url.find("code=") + 5 :]
+            if self.__business:
+                authorization_code = response_url[response_url.find("code=") + 5 : response_url.find("&session")]
+            else:
+                authorization_code = response_url[response_url.find("code=") + 5 :]
             res = client.acquire_token_by_authorization_code(code = authorization_code, scopes = scopes)
             expires_in = time.time() + res["expires_in"]
             with open(f".data/onedrive_{self.__client_id}.json", "w") as f: # save to file

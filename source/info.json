@@ -3,7 +3,7 @@
         "description": "本地文件"
     },
     "onedrive": {
-        "description": "Onedrive文件（个人版）"
+        "description": "Onedrive文件"
     },
     "pcloud": {
         "description": "Pcloud文件"
