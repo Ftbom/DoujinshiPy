@@ -3,10 +3,7 @@
         "description": "本地文件"
     },
     "onedrive": {
-        "description": "Onedrive文件"
-    },
-    "onedrive_appfolder": {
-        "description": "Onedrive文件（个人版appfolder）"
+        "description": "Onedrive文件（个人版）"
     },
     "pcloud": {
         "description": "Pcloud文件"
