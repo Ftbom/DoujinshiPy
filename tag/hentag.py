@@ -53,5 +53,12 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
                 tags.append("mixed:" + i)
             else:
                 tags.append("other:" + i)
+    for tag in tags:
+        if "uncensored" in tag:
+            tags.remove(tag)
+        if "full censorship" in tag:
+            tags.remove(tag)
+        if "mosaic censorship" in tag:
+            tags.remove(tag)
     time.sleep(0.5)
     return tags
