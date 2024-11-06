@@ -12,6 +12,7 @@ class Source:
     def __init__(self, config) -> None:
         self.__client_id = config["id"]
         self.__client_secret = config["secret"]
+        self.__appfolder = config["appfolder"]
         if not config["proxy"] == "":
             self.__proxies = {"http": config["proxy"], "https": config["proxy"]}
         else:
@@ -19,12 +20,15 @@ class Source:
         self.__path = config["path"]
         self.__api_baseurl = "https://graph.microsoft.com/v1.0/me"
         self.__token = None
-        if not os.path.exists(".data/onedrive.json"):
+        if not os.path.exists(f".data/onedrive_{self.__client_id}.json"):
             self.__acquire_token()
 
     def __acquire_token(self) -> tuple:
         # get access_token and refresh_token
-        scopes = ["Files.ReadWrite.All"]
+        if self.__appfolder:
+            scopes = ["Files.ReadWrite.AppFolder"]
+        else:
+            scopes = ["Files.ReadWrite.All"]
         try:
             # get token
             client = ConfidentialClientApplication(client_id  = self.__client_id,
@@ -36,7 +40,7 @@ class Source:
             authorization_code = response_url[response_url.find("code=") + 5 :]
             res = client.acquire_token_by_authorization_code(code = authorization_code, scopes = scopes)
             expires_in = time.time() + res["expires_in"]
-            with open(".data/onedrive.json", "w") as f: # save to file
+            with open(f".data/onedrive_{self.__client_id}.json", "w") as f: # save to file
                 f.write(json.dumps({"access_token": res["access_token"], "refresh_token": res["refresh_token"],
                  "expires_in": expires_in}))
             return (res["access_token"], expires_in)
@@ -45,17 +49,20 @@ class Source:
 
     def __refresh_token(self) -> tuple:
         # refresh token
-        if not os.path.exists(".data/onedrive.json"):
+        if not os.path.exists(f".data/onedrive_{self.__client_id}.json"):
             return self.__acquire_token()
-        with open(".data/onedrive.json", "r") as f:
+        with open(f".data/onedrive_{self.__client_id}.json", "r") as f:
             refresh_token = json.loads(f.read())["refresh_token"]
-        scopes = ["Files.ReadWrite.All"]
+        if self.__appfolder:
+            scopes = ["Files.ReadWrite.AppFolder"]
+        else:
+            scopes = ["Files.ReadWrite.All"]
         client = ConfidentialClientApplication(client_id  = self.__client_id,
                         client_credential = self.__client_secret, proxies = self.__proxies)
         try:
             res = client.acquire_token_by_refresh_token(refresh_token, scopes) # refresh
             expires_in = time.time() + res["expires_in"]
-            with open(".data/onedrive.json", "w") as f:
+            with open(f".data/onedrive_{self.__client_id}.json", "w") as f:
                 f.write(json.dumps({"access_token": res["access_token"], "refresh_token": res["refresh_token"],
                      "expires_in": expires_in}))
             return (res["access_token"], expires_in)
@@ -65,10 +72,10 @@ class Source:
     def __access_token(self) -> None:
         # read token from file
         if self.__token == None:
-            if not os.path.exists(".data/onedrive.json"):
+            if not os.path.exists(f".data/onedrive_{self.__client_id}.json"):
                 (self.__token, self.__expires_in) = self.__acquire_token()
                 return
-            with open(".data/onedrive.json", "r") as f:
+            with open(f".data/onedrive_{self.__client_id}.json", "r") as f:
                 token = json.loads(f.read())
             self.__token = token["access_token"]
             self.__expires_in = token["expires_in"]
@@ -86,7 +93,11 @@ class Source:
                 path_ = f":/{path}:"
             else:
                 path_ = path
-            res = requests.get(f"{self.__api_baseurl}/drive/root{path_}/children?select=name,folder",
+            if self.__appfolder:
+                base_url = f"{self.__api_baseurl}/drive/special/approot"
+            else:
+                base_url = f"{self.__api_baseurl}/drive/root"
+            res = requests.get(base_url + path_ + "/children?select=name,folder",
                                headers = self.__get_headers(), proxies = self.__proxies).json()
         else:
             res = requests.get(link, headers = self.__get_headers(), proxies = self.__proxies).json()
@@ -113,7 +124,11 @@ class Source:
     
     def get_file(self, identifier: str) -> str:
         identifier = identifier.strip("/")
-        res = requests.get(f"{self.__api_baseurl}/drive/root:/{identifier}",
+        if self.__appfolder:
+            base_url = f"{self.__api_baseurl}/drive/special/approot:/"
+        else:
+            base_url = f"{self.__api_baseurl}/drive/root:/"
+        res = requests.get(base_url + identifier,
                            headers = self.__get_headers(), proxies = self.__proxies).json()
         if "error" in res:
             raise RuntimeError(res["error"]["message"])

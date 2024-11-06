@@ -123,24 +123,14 @@ class Source:
 
 ## 源配置
 
-### onedrive
+### onedrive（个人版）
 
 云盘
 
 重定向链接：http://localhost:5000/getAToken
 
 ```
-"name": {"type": "onedrive", config: {"id": "", "secret": "", "proxy": "", "path": ""}}
-```
-
-### onedrive_appfolder
-
-云盘
-
-重定向链接：http://localhost:5000/getAToken
-
-```
-"name": {"type": "onedrive_appfolder", config: {"id": "", "secret": "", "proxy": "", "path": ""}}
+"name": {"type": "onedrive", config: {"id": "", "secret": "", "appfolder": false, "proxy": "", "path": ""}}
 ```
 
 ### pcloud
