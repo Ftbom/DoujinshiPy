@@ -27,8 +27,8 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
             tags.append("category:" + CATEGORIES_TRANS[data["category"]])
         except:
             pass
-    if "language" in data:
-        tags.append("language:" + data["language"])
+    # if "language" in data:
+    #     tags.append("language:" + data["language"])
     if "circles" in data:
         for i in data["circles"]:
             tags.append("group:" + i)
@@ -49,16 +49,11 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
             tags.append("male:" + i)
     if "otherTags" in data:
         for i in data["otherTags"]:
+            if i in ["uncensored", "full censorship", "mosaic censorship"]:
+                continue
             if i in MIXED_TAGS:
                 tags.append("mixed:" + i)
             else:
                 tags.append("other:" + i)
-    for tag in tags:
-        if "uncensored" in tag:
-            tags.remove(tag)
-        if "full censorship" in tag:
-            tags.remove(tag)
-        if "mosaic censorship" in tag:
-            tags.remove(tag)
     time.sleep(0.5)
     return tags

@@ -23,10 +23,12 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
     tags = res["gmetadata"][0]["tags"]
     tags.append("category:" + res["gmetadata"][0]["category"].lower().replace(" ",""))
     for tag in tags:
-        if "uncensored" in tag:
+        if "language:" in tag:
             tags.remove(tag)
-        if "full censorship" in tag:
+        if "other:uncensored" == tag:
             tags.remove(tag)
-        if "mosaic censorship" in tag:
+        if "other:full censorship" == tag:
+            tags.remove(tag)
+        if "other:mosaic censorship" == tag:
             tags.remove(tag)
     return tags

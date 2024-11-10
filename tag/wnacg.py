@@ -17,6 +17,13 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list[str]:
     soup = BeautifulSoup(res.content, "html.parser")
     tags = []
     for tag in soup.find("div", class_ = "addtags").find_all("a", class_ = "tagshow"):
-        tags.append(tag.get_text())
+        tag = tag.get_text()
+        add = True
+        for exclude in ["薄码", "厚码", "无修", "无码", "無修", "修正", "马赛克", "黑条", "黑條"]:
+            if exclude in tag:
+                add = False
+                break
+        if add:
+            tags.append(tag)
     time.sleep(0.5)
     return tags
