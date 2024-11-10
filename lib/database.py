@@ -4,7 +4,7 @@ import logging
 from lib.utils import (get_all_values_from_set, delete_group_from_redis, set_name_of_group,
                        set_metadata_of_doujinshi, delete_doujinshi_from_redis)
 
-def translate_tags(tags, tag_database):
+def translate_tags(client, tags):
     new_tags = []
     for tag in tags:
         tag_parts = tag.split(":")
@@ -13,21 +13,26 @@ def translate_tags(tags, tag_database):
         else:
             tag_type = tag_parts[0].strip()
             tag_value = tag_parts[1].strip()
-            if tag_type in tag_database:
-                if tag_value in tag_database[tag_type]:
-                    new_tags.append(f"{tag_type}:{tag_database[tag_type][tag_value]}")
+            if tag_type in ["male", "female", "mixed", "other"]:
+                tag_type_ = "other"
+            else:
+                tag_type_ = tag_type
+            if client.exists(f"ehtag:{tag_type_}"):
+                value = client.hget(f"ehtag:{tag_type_}", tag_value)
+                if not value == None:
+                    new_tags.append(f"{tag_type}:{value}")
                 else:
                     new_tags.append(tag)
             else:
                 new_tags.append(tag)
     return new_tags
 
-def get_metadata(client, id: str, tag_database: dict = None) -> dict:
+def get_metadata(client, id: str, tag_database = None) -> dict:
     doujinshi = client.hgetall(f"doujinshi:{id}")
     tags = doujinshi["tags"].split("|")
     tags = [item for item in tags if item != ""]
     if not tag_database == None:
-        translated_tags = translate_tags(tags, tag_database)
+        translated_tags = translate_tags(client, tags)
     else:
         translated_tags = None
     # 获取group

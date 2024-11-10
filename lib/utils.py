@@ -61,29 +61,6 @@ class Group(SQLModel, table = True):
     id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # 自动生成id
     name: str
 
-def app_init(app_state) -> None:
-    client = app_state["redis_client"]
-    try:
-        client.flushall()
-    except:
-        print("please start redis first")
-        exit()
-    os.makedirs(".data/cache", exist_ok = True)
-    os.makedirs(".data/thumb", exist_ok = True)
-    # 缓存大小检查
-    cache_size = get_cache_size()
-    cache_size_limit = app_state["settings"]["max_cache_size"] * 1024 * 1024
-    if cache_size >= cache_size_limit:
-        try:
-            shutil.rmtree(".data/cache")
-        except:
-            pass
-        os.makedirs(".data/cache", exist_ok = True)
-        cache_size = 0
-    client.set("cache_size", cache_size)
-    client.set("cache_size_limit", cache_size_limit)
-    load_database_to_redis(app_state)
-
 # json转为Doujinshi类
 def doujinshi_from_json(id, result: dict) -> Doujinshi:
     if result["pagecount"] == -1:
@@ -309,7 +286,7 @@ def get_cache_size() -> int:
                 total_size = total_size + os.path.getsize(file_path)
     return total_size
 
-def get_ehtag_database(proxy):
+def update_ehtag_database(proxy):
     print("check for EhTagTranslation database update...")
     releases_url = "https://api.github.com/repos/EhTagTranslation/Database/releases"
     content = requests.get(releases_url, proxies = proxy).content
@@ -337,9 +314,44 @@ def get_ehtag_database(proxy):
                 data[t["namespace"]] = data_content
         with open(f".data/tag_database.{release_tag_name}.json", "wb") as f:
             f.write(json.dumps(data).encode("utf-8"))
-        return data
-    with open(f".data/tag_database.{release_tag_name}.json", "rb") as f:
-        return json.loads(f.read())
+    return release_tag_name
+
+def load_ehtag_database_to_redis(app_state) -> None:
+    if not app_state["settings"]["tag_translate"] == None:
+        with open(f".data/tag_database.{app_state['settings']['tag_translate']}.json", "rb") as f:
+            tag_database = json.loads(f.read())
+        client = app_state["redis_client"]
+        for key in tag_database.keys():
+            if key in ["male", "female", "mixed", "other"]:
+                key_ = "other"
+            else:
+                key_ = key
+            for k in tag_database[key].keys():
+                client.hset(f"ehtag:{key_}", mapping = {k: tag_database[key][k]})
+
+def app_init(app_state) -> None:
+    client = app_state["redis_client"]
+    try:
+        client.flushall()
+    except:
+        print("please start redis first")
+        exit()
+    os.makedirs(".data/cache", exist_ok = True)
+    os.makedirs(".data/thumb", exist_ok = True)
+    # 缓存大小检查
+    cache_size = get_cache_size()
+    cache_size_limit = app_state["settings"]["max_cache_size"] * 1024 * 1024
+    if cache_size >= cache_size_limit:
+        try:
+            shutil.rmtree(".data/cache")
+        except:
+            pass
+        os.makedirs(".data/cache", exist_ok = True)
+        cache_size = 0
+    client.set("cache_size", cache_size)
+    client.set("cache_size_limit", cache_size_limit)
+    load_database_to_redis(app_state)
+    load_ehtag_database_to_redis(app_state)
 
 def load_settings() -> dict:
     with open(".data/config.json", "r", encoding = "utf-8") as f:
@@ -349,7 +361,7 @@ def load_settings() -> dict:
     else:
         settings["proxy"] = {}
     if settings["tag_translate"]:
-        settings["tag_translate"] = get_ehtag_database(settings["proxy"])
+        settings["tag_translate"] = update_ehtag_database(settings["proxy"])
     else:
         settings["tag_translate"] = None
     return settings
