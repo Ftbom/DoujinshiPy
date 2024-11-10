@@ -17,4 +17,4 @@ def get_cover(source, proxy, doujinshi: Doujinshi, url) -> None:
     with open(f".data/thumb/{doujinshi.id}.jpg", "wb") as f:
         res = requests.get(res[0]["coverImageUrl"], proxies = proxy).content
         f.write(res)
-    time.sleep(0.5)
+    time.sleep(60)

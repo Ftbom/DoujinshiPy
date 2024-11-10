@@ -19,8 +19,8 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
             url = url.strip("/").split("/")[-1]
         json = {"ids": [url]}
         url = "https://hentag.com/api/v1/search/vault/id"
-    res = requests.post(url, proxies = proxy, json = json).json()
-    data = res[0]
+    res = requests.post(url, proxies = proxy, json = json)
+    data = res.json()[0]
     tags = []
     if "category" in data:
         try:
@@ -55,5 +55,5 @@ def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
                 tags.append("mixed:" + i)
             else:
                 tags.append("other:" + i)
-    time.sleep(0.5)
+    time.sleep(60)
     return tags
