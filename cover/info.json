@@ -14,5 +14,9 @@
     "hentag": {
         "name": "Hentag",
         "description": "通过Hentag获取封面"
+    },
+    "hitomi": {
+        "name": "Hitomi",
+        "description": "通过Hitomi获取封面"
     }
 }
