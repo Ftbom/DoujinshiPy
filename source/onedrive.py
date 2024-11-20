@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import urllib
 import requests
 from lib.utils import SourceType
 from msal import ConfidentialClientApplication
@@ -135,7 +136,7 @@ class Source:
             base_url = f"{self.__api_baseurl}/drive/special/approot:/"
         else:
             base_url = f"{self.__api_baseurl}/drive/root:/"
-        res = requests.get(base_url + identifier,
+        res = requests.get(base_url + urllib.parse.quote(identifier),
                            headers = self.__get_headers(), proxies = self.__proxies).json()
         if "error" in res:
             raise RuntimeError(res["error"]["message"])
