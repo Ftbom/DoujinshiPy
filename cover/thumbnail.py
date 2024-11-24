@@ -76,6 +76,7 @@ def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
         generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
     zip_file.close()
     time.sleep(sleep_time)
+    time.sleep(1)
 
 def get_cover(source, proxy, doujinshi: Doujinshi, url) -> None:
     if doujinshi.type == SourceType.web:
