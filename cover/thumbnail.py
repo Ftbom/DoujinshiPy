@@ -8,8 +8,8 @@ import remotezip
 from PIL import Image
 from lib.utils import Doujinshi, SourceType
 
-def generate_thumbnail(file_bytes: io.BytesIO, thumb_path: str) -> bytes:
-    image = Image.open(file_bytes)
+def generate_thumbnail(file_bytes: bytes, thumb_path: str):
+    image = Image.open(io.BytesIO(file_bytes))
     x, y = image.size
     i = 400 / y
     image.thumbnail((x * i, y * i)) # count size
@@ -27,7 +27,7 @@ def sevenzip_thumbnail(file_path: str, id: str) -> None:
         if file.is_directory:
             filelist.remove(file.filename)
     image_bytes = sevenzip_file.read([filelist[0]])[filelist[0]]
-    generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
+    generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
     image_bytes.close()
     sevenzip_file.close()
 
@@ -40,7 +40,7 @@ def zip_thumbnail(file_path: str, id: str) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with zip_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
+        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
     zip_file.close()
 
 def rar_thumbnail(file_path: str, id: str) -> None:
@@ -52,7 +52,7 @@ def rar_thumbnail(file_path: str, id: str) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with rar_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
+        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
     rar_file.close()
 
 def local_thumbnail(file_path: str, id: str) -> None:
@@ -73,7 +73,7 @@ def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with zip_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes, f".data/thumb/{id}.jpg")
+        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
     zip_file.close()
     time.sleep(sleep_time)
     time.sleep(1)
