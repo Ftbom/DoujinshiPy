@@ -3,6 +3,10 @@
         "name": "缩略图",
         "description": "从压缩包中获取缩略图"
     },
+    "weburl": {
+        "name": "Web链接",
+        "description": "从图片链接获取缩略图"
+    },
     "wnacg": {
         "name": "绅士漫画",
         "description": "通过绅士漫画获取封面"

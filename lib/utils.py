@@ -134,6 +134,25 @@ def get_all_values_from_set(client, key):
             break
     return results
 
+# 逐页从list获取数据
+def get_values_from_list_by_page(client, key, page, max_perpage = 15):
+    start = page * max_perpage  # 页面的起始索引
+    end = start + max_perpage - 1  # 页面的结束索引
+    return client.lrange(key, start, end)
+
+# 获取list所有数据
+def get_all_values_from_list(client, key, max_perpage = 15):
+    results = []
+    page = 0
+    while True:
+        # 获取当前页的数据
+        page_results = get_values_from_list_by_page(client, key, page, max_perpage)
+        if not page_results:
+            break  # 如果没有数据了，跳出循环
+        results.extend(page_results)
+        page = page + 1  # 进入下一页
+    return results
+
 # 添加doujinshi到redis
 def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, backup_sql = True) -> None:
     if doujinshi.pagecount == None:
@@ -151,11 +170,11 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, back
         "source": doujinshi.source
     })
     add_id_to_titles(client, did, doujinshi.title)
-    client.sadd("data:doujinshis", did)
+    client.rpush("data:doujinshis", did)
     if add_group:
         for g in doujinshi.groups.split("|"):
             if not g == "":
-                client.sadd(f"data:group_{g}", did)
+                client.rpush(f"data:group_{g}", did)
     if backup_sql:
         mark_modified(client, did)
 
@@ -184,10 +203,10 @@ def delete_doujinshi_from_redis(client, id, title = None, groups = None) -> None
         groups = client.hget(f"doujinshi:{id}", "groups")
     client.delete(f"doujinshi:{id}")
     delete_id_from_titles(client, id, title)
-    client.srem("data:doujinshis", id)
+    client.lrem("data:doujinshis", 0, id)
     for g in groups.split("|"):
         if not g == "":
-            client.srem(f"data:group_{g}", id)
+            client.lrem(f"data:group_{g}", 0, id)
     mark_modified(client, id)
 
 # 设置doujinshi的group
@@ -196,12 +215,17 @@ def set_group_of_doujinshi(client, gid: str, target_id, replace_old: bool = Fals
     if groups == None:
         return False
     if replace_old:
+        for g in groups.split("|"):
+            if not g == "":
+                client.lrem(f"data:group_{g}", 0, target_id)
         groups = [gid]
     else:
         groups = groups.split("|")
+        if gid in groups:
+            return True
         groups.append(gid)
     client.hset(f"doujinshi:{target_id}", "groups", "|".join(groups).strip("|"))
-    client.sadd(f"data:group_{gid}", target_id)
+    client.rpush(f"data:group_{gid}", target_id)
     mark_modified(client, target_id)
     return True
 
@@ -223,9 +247,10 @@ def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = F
     client.hset(f"doujinshi:{id}", "tags", "|".join(old_tags).strip("|"))
     if title != None:
         old_title = client.hget(f"doujinshi:{id}", "title")
-        client.hset(f"doujinshi:{id}", "title", title)
-        delete_id_from_titles(client, id, old_title)
-        add_id_to_titles(client, id, title)
+        if title != old_title:
+            client.hset(f"doujinshi:{id}", "title", title)
+            delete_id_from_titles(client, id, old_title)
+            add_id_to_titles(client, id, title)
     mark_modified(client, id)
     return True
 
@@ -249,7 +274,7 @@ def set_name_of_group(client, id: str, name) -> bool:
 def delete_group_from_redis(client, id) -> None:
     client.delete(f"group:{id}")
     client.srem("data:groups", id)
-    ids = get_all_values_from_set(client, f"data:group_{id}")
+    ids = get_all_values_from_list(client, f"data:group_{id}")
     client.delete(f"data:group_{id}")
     for _id in ids:
         groups = client.hget(f"doujinshi:{_id}", "groups")

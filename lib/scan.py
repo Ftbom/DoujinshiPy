@@ -2,13 +2,13 @@ import os
 import time
 import logging
 import requests
-from lib.utils import Doujinshi, SourceType, add_doujinshi_to_redis, delete_doujinshi_from_redis, get_all_values_from_set
+from lib.utils import Doujinshi, SourceType, add_doujinshi_to_redis, delete_doujinshi_from_redis, get_all_values_from_list
 
 def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_replace: bool) -> None:
     client = app_state["redis_client"]
     num = len(id_list)
     infos = {}
-    dids = get_all_values_from_set(client, "data:doujinshis")
+    dids = get_all_values_from_list(client, "data:doujinshis")
     for did in dids:
         json_data = client.hgetall(f"doujinshi:{did}")
         if json_data["source"] == source_name:
@@ -46,7 +46,7 @@ def clean_database_by_source_name(client, name: str, doujinshi_list: list) -> li
     for i in range(len(doujinshi_list)):
         f_name, ext = os.path.splitext(str(doujinshi_list[i][0]))
         doujinshi_list[i] = (f_name, str(doujinshi_list[i][1]))
-    dids = get_all_values_from_set(client, "data:doujinshis")
+    dids = get_all_values_from_list(client, "data:doujinshis")
     for did in dids:
         json_data = client.hgetall(f"doujinshi:{did}")
         if json_data["source"] == name:

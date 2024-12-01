@@ -4,10 +4,6 @@ import json
 import requests
 from lib.utils import Doujinshi
 
-MIXED_TAGS = ['kodomo doushi', 'animal on animal', 'body swap', 'multimouth blowjob', 'multiple handjob', 'frottage', 'multiple assjob',
-              'multiple footjob', 'nudism', 'ffm threesome', 'gang rape', 'group', 'mmf threesome', 'mmt threesome', 'mtf threesome',
-              'oyakodon', 'shimaidon', 'ttm threesome', 'twins', 'incest', 'inseki', 'low incest']
-
 def get_gg(id, proxy):
     res = requests.get(f"https://ltn.hitomi.la/gg.js?_={int(time.time() * 1000)}", proxies = proxy,
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0",
