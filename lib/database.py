@@ -142,6 +142,8 @@ def search_doujinshi(client, parameters, max_perpage, tag_database) -> dict:
         results = get_values_from_list_by_page(client, query_key, parameters[4], max_perpage)
     doujinshi = []
     for result in results:
+        if not client.exists(f"doujinshi:{result}"):
+            continue
         doujinshi.append(get_metadata(client, result, tag_database))
     return doujinshi
 
