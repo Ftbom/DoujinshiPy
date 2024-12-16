@@ -153,14 +153,43 @@ def get_all_values_from_list(client, key, max_perpage = 15):
         page = page + 1  # 进入下一页
     return results
 
+# 翻译tags
+def translate_tags(tag_database, tags):
+    tags = tags.split("|")
+    tags = [item for item in tags if item != ""]
+    new_tags = []
+    for tag in tags:
+        tag = tag.strip()
+        tag_parts = tag.split(":")
+        if len(tag_parts) == 1:
+            if tag in tag_database["other"]:
+                new_tags.append(tag_database["other"][tag])
+            else:
+                new_tags.append(tag)
+        else:
+            tag_type = tag_parts[0].strip()
+            tag_value = tag_parts[1].strip()
+            if tag_type in ["male", "female", "mixed", "other"]:
+                tag_type_ = "other"
+            else:
+                tag_type_ = tag_type
+            if tag_type_ in tag_database:
+                if tag_value in tag_database[tag_type_]:
+                    new_tags.append(f"{tag_type}:{tag_database[tag_type_][tag_value]}")
+                else:
+                    new_tags.append(tag)
+            else:
+                new_tags.append(tag)
+    return "|".join(new_tags)
+
 # 添加doujinshi到redis
-def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, backup_sql = True) -> None:
+def add_doujinshi_to_redis(client, doujinshi: Doujinshi, tag_database, add_group = False, backup_sql = True) -> None:
     if doujinshi.pagecount == None:
         pagecount = -1
     else:
         pagecount = doujinshi.pagecount
     did = str(doujinshi.id)
-    client.hset(f"doujinshi:{did}", mapping = {
+    doujinshi_metadata = {
         "title": doujinshi.title,
         "pagecount": pagecount,
         "tags": doujinshi.tags,
@@ -168,8 +197,10 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, back
         "identifier": doujinshi.identifier,
         "type": str(doujinshi.type).split(".")[1],
         "source": doujinshi.source
-    })
-    add_id_to_titles(client, did, doujinshi.title)
+    }
+    if not tag_database == None:
+        doujinshi_metadata["translated_tags"] = translate_tags(tag_database, doujinshi.tags)
+    client.hset(f"doujinshi:{did}", mapping = doujinshi_metadata)
     client.rpush("data:doujinshis", did)
     if add_group:
         for g in doujinshi.groups.split("|"):
@@ -178,23 +209,6 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, back
     if backup_sql:
         mark_modified(client, did)
 
-def delete_id_from_titles(client, id, title) -> None:
-    title_data = client.hget("data:titles", title)
-    if title_data == id:
-        client.hdel("data:titles", title)
-    else:
-        title_data = title_data.split("$")
-        title_data.remove(id)
-        client.hset("data:titles", title, "$".join(title_data))
-
-def add_id_to_titles(client, id, title) -> None:
-    title_data = client.hget("data:titles", title)
-    if title_data == None:
-        title_data = id
-    else:
-        title_data = title_data + "$" + id # title重复
-    client.hset("data:titles", title, title_data)
-
 # 删除doujinshi
 def delete_doujinshi_from_redis(client, id, title = None, groups = None) -> None:
     if title == None:
@@ -202,7 +216,6 @@ def delete_doujinshi_from_redis(client, id, title = None, groups = None) -> None
     if groups == None:
         groups = client.hget(f"doujinshi:{id}", "groups")
     client.delete(f"doujinshi:{id}")
-    delete_id_from_titles(client, id, title)
     client.lrem("data:doujinshis", 0, id)
     for g in groups.split("|"):
         if not g == "":
@@ -246,11 +259,7 @@ def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = F
                 old_tags.append(t)
     client.hset(f"doujinshi:{id}", "tags", "|".join(old_tags).strip("|"))
     if title != None:
-        old_title = client.hget(f"doujinshi:{id}", "title")
-        if title != old_title:
-            client.hset(f"doujinshi:{id}", "title", title)
-            delete_id_from_titles(client, id, old_title)
-            add_id_to_titles(client, id, title)
+        client.hset(f"doujinshi:{id}", "title", title)
     mark_modified(client, id)
     return True
 
@@ -293,11 +302,12 @@ def load_database_to_redis(app_state) -> None:
     client = app_state["redis_client"]
     engine = create_engine("sqlite:///.data/database.db")
     avaliable_sources = list(app_state["sources"].keys())
+    ehtag = load_ehtag_database(app_state)
     with Session(engine) as session:
         results = session.exec(select(Doujinshi))
         for result in results:
             if result.source in avaliable_sources:
-                add_doujinshi_to_redis(client, result, True, False)
+                add_doujinshi_to_redis(client, result, ehtag, True, False)
         results = session.exec(select(Group))
         for result in results:
             add_group_to_redis(client, result, False)
@@ -341,18 +351,23 @@ def update_ehtag_database(proxy):
             f.write(json.dumps(data).encode("utf-8"))
     return release_tag_name
 
-def load_ehtag_database_to_redis(app_state) -> None:
-    if not app_state["settings"]["tag_translate"] == None:
-        with open(f".data/tag_database.{app_state['settings']['tag_translate']}.json", "rb") as f:
-            tag_database = json.loads(f.read())
-        client = app_state["redis_client"]
-        for key in tag_database.keys():
-            if key in ["male", "female", "mixed", "other"]:
-                key_ = "other"
-            else:
-                key_ = key
-            for k in tag_database[key].keys():
-                client.hset(f"ehtag:{key_}", mapping = {k: tag_database[key][k]})
+def load_ehtag_database(app_state):
+    if app_state["settings"]["tag_translate"] == None:
+        return None
+    ehtag = {}
+    with open(f".data/tag_database.{app_state['settings']['tag_translate']}.json", "rb") as f:
+        tag_database = json.loads(f.read())
+    for key in tag_database.keys():
+        if key in ["male", "female", "mixed", "other"]:
+            key_ = "other"
+        else:
+            key_ = key
+        if not key_ in ehtag:
+            ehtag[key_] = {}
+        for k in tag_database[key].keys():
+            v = tag_database[key][k]
+            ehtag[key_][k] = v
+    return ehtag
 
 def app_init(app_state) -> None:
     client = app_state["redis_client"]
@@ -376,7 +391,6 @@ def app_init(app_state) -> None:
     client.set("cache_size", cache_size)
     client.set("cache_size_limit", cache_size_limit)
     load_database_to_redis(app_state)
-    load_ehtag_database_to_redis(app_state)
 
 def load_settings() -> dict:
     with open(".data/config.json", "r", encoding = "utf-8") as f:

@@ -169,8 +169,7 @@ def get_all_groups(token: str = Depends(oauth2)) -> dict:
 def get_doujinshi_by_group_id(id: str, page: int, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        result = get_doujinshi_by_group(app_state["redis_client"], id, page, app_state["settings"]["max_num_perpage"],
-                                        app_state["settings"]["tag_translate"])
+        result = get_doujinshi_by_group(app_state["redis_client"], id, page, app_state["settings"]["max_num_perpage"])
         if result == {}:
             return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
@@ -206,18 +205,18 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
 def get_doujinshis_by_page(page: int, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     return {"msg": "success", "data": get_doujinshi_list(app_state["redis_client"], page,
-                        app_state["settings"]["max_num_perpage"], app_state["settings"]["tag_translate"])}
+                        app_state["settings"]["max_num_perpage"])}
 
 @app.get("/doujinshi/random")
 def get_random_doujinshis(token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_random_doujinshi_list(app_state["redis_client"], app_state["settings"]["tag_translate"])}
+    return {"msg": "success", "data": get_random_doujinshi_list(app_state["redis_client"])}
 
 @app.get("/doujinshi/{id}/metadata")
 def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
-        result = get_doujinshi_by_id(app_state["redis_client"], id, app_state["settings"]["tag_translate"])
+        result = get_doujinshi_by_id(app_state["redis_client"], id)
         if result == {}:
             return JSONResponse({"error": f"doujinshi {id} not exists"}, status_code = 404)
         return {"msg": "success", "data": result}
@@ -313,14 +312,14 @@ def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     return JSONResponse({"error": f"doujinshi thumbnail {id} not exist"}, status_code = 404)
 
 @app.get("/search")
-def search(query: str, page: int, source_name: str = "", tag: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
+def search(query: str, page: int, source_name: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    tag_list = tag.split("$")
-    for i in range(len(tag_list)):
-        tag_list[i] = tag_list[i].strip(" ")
-    tag_list = [item for item in tag_list if item != ""]
-    return {"msg": "success", "data": search_doujinshi(app_state["redis_client"], (query, tag_list, group, source_name, page),
-                                        app_state["settings"]["max_num_perpage"], app_state["settings"]["tag_translate"])}
+    query_list = query.lower().split("$,")
+    query_list = [item for item in query_list if item != ""]
+    for i in range(len(query_list)):
+        query_list[i] = query_list[i].strip(" ").strip("$")
+    return {"msg": "success", "data": search_doujinshi(app_state["redis_client"], (query_list, group, source_name, page),
+                                        app_state["settings"]["max_num_perpage"])}
 
 @app.get("/web/{source_name}/search")
 def search_web(source_name: str, query: str, page: int, token: str = Depends(oauth2)) -> dict:
