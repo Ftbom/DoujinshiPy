@@ -146,14 +146,15 @@ class Source:
         if self.__exhentai:
             self.__update_cookies()
         result = {}
-        page_list = page // 40
+        page_max_num = 20
+        page_list = page // page_max_num
         id_str = "/".join(ids.split("_"))
         res = self.__session.get(f"{self.__base_url}/g/{id_str}/?p={str(page_list)}")
         self.__error_handle(res)
         soup = BeautifulSoup(res.content, "html.parser")
         items = soup.find("div", id = "gdt").find_all("a")
         for i in range(len(items)):
-            result[page_list * 40 + i] = items[i].attrs["href"]
+            result[page_list * page_max_num + i] = items[i].attrs["href"]
         return result
 
     def get_img_url(self, url: str) -> dict:
