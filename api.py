@@ -320,37 +320,3 @@ def search(query: str, page: int, source_name: str = "", group: str = "", token:
         query_list[i] = query_list[i].strip(" ").strip("$")
     return {"msg": "success", "data": search_doujinshi(app_state["redis_client"], (query_list, group, source_name, page),
                                         app_state["settings"]["max_num_perpage"])}
-
-@app.get("/web/{source_name}/search")
-def search_web(source_name: str, query: str, page: int, token: str = Depends(oauth2)) -> dict:
-    verify_token(token)
-    sources = app_state["sources"]
-    if not source_name in sources:
-        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
-    if not sources[source_name].TYPE == SourceType.web: # just web source support
-        return JSONResponse({"error": "this source does not support web search"}, status_code = 400)
-    obj = sources[source_name]
-    if hasattr(obj, "search") and callable(getattr(obj, "search")):
-        return {"msg": "success", "data": obj.search(query, page)}
-    else:
-        return JSONResponse({"error": "this source does not support web search"}, status_code = 400)
-
-@app.get("/web/{source_name}/{id}/metadata")
-def get_web_doujinshi(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
-    verify_token(token)
-    sources = app_state["sources"]
-    if not source_name in sources:
-        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
-    if not sources[source_name].TYPE == SourceType.web: # just web source support
-        return JSONResponse({"error": "this source does not support web metadata"}, status_code = 400)
-    return {"msg": "success", "data": sources[source_name].get_metadata(id)}
-
-@app.get("/web/{source_name}/{id}/pages")
-def get_web_doujinshi_pages(source_name: str, id: str, token: str = Depends(oauth2)) -> dict:
-    verify_token(token)
-    sources = app_state["sources"]
-    if not source_name in sources:
-        return JSONResponse({"error": "incorrect source name"}, status_code = 404)
-    if not sources[source_name].TYPE == SourceType.web: # just web source support
-        return JSONResponse({"error": "this source does not support web pages"}, status_code = 400)
-    return {"msg": "success", "data": sources[source_name].get_pages(id)}

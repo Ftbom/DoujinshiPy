@@ -86,9 +86,6 @@ class Source:
   def __init__(self, config) -> None:
     pass
 
-  def search(self, query: str, page: int) -> list: # 可不定义
-    return [{"id": "", "title": "", "thumb": {"url": "", "headers": {}}}]
-
   def get_metadata(self, id: str) -> dict:
     return {"id": "", "title": "", "pagecount": "", "tags": [], "cover": {"url": "", "headers": {}}}
 

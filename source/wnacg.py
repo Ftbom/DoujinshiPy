@@ -13,20 +13,6 @@ class Source:
             self.__proxies = {}
         self.__base_url = "https://www.wnacg.com"
 
-    def search(self, query: str, page: int) -> list:
-        results = []
-        res = requests.get(f"{self.__base_url}/search?q={query}&m=&syn=yes&f=_all&s=create_time_DESC&p={page}", proxies = self.__proxies,
-                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
-        soup = BeautifulSoup(res.content, "html.parser")
-        for item in soup.find_all(class_ = "gallary_item"):
-            title = item.img.attrs["alt"]
-            title = title.replace("</em>", "")
-            title = title.replace("<em>", "")
-            id_ = item.a.attrs["href"].replace("/photos-index-aid-", "").replace(".html", "")
-            thumb = "http:" + item.img.attrs["src"]
-            results.append({"id": id_, "title": title, "thumb": {"url": thumb, "headers": {}}})
-        return results
-
     def get_metadata(self, id: str) -> dict:
         if id.startswith("http://") or id.startswith("https://"):
             id = id[id.find("-aid-") + 5 : id.find(".html")]
