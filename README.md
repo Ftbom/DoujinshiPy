@@ -4,7 +4,7 @@
 
 ## 安装
 
-**需要安装unrar和redis**
+**需要先安装unrar和redis**
 
 ```shell
 python install.py
@@ -56,6 +56,13 @@ def get_tag(app_state, doujinshi: Doujinshi, url) -> list[str]:
 >注意对一些网站需要适当sleep，防止网站封禁IP
 
 ### 源
+
+若需要对图片（不包括cover）bytes进行处理，需要在类的方法内添加：
+
+```python
+def img_processor(self, img_bytes: bytes) -> bytes:
+  return img
+```
 
 cloud源
 

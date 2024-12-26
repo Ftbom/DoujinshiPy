@@ -69,22 +69,30 @@ def get_page_count(app_state, doujinshi: dict, id: str) -> int:
 def get_page_urls(app_state, id: str) -> list[str]:
     client = app_state["redis_client"]
     result = client.hgetall(f"doujinshi:{id}")
+    source_object = app_state["sources"][result["source"]]
     if result == {}:
         return []
-    if (result["type"] == "web") and (not app_state["settings"]["proxy_webpage"]):
-        pages_result = app_state["sources"][result["source"]].get_pages(result["identifier"]) # 若未设置代理图片，获取网页源图片
-        if (pages_result != []) and (pages_result != {}):
-            return pages_result
+    process_img = False
+    if hasattr(source_object, "img_processor") and callable(getattr(source_object, "img_processor")):
+        process_img = True
+    if not process_img:
+        if (result["type"] == "web") and (not app_state["settings"]["proxy_webpage"]):
+            pages_result = source_object.get_pages(result["identifier"]) # 若未设置代理图片，获取网页源图片
+            if (pages_result != []) and (pages_result != {}):
+                return pages_result
     if result["pagecount"] == "-1":
         pagecount = get_page_count(app_state, result, id) # 获取页面数目
     else:
         pagecount = int(result["pagecount"])
     page_list = []
     for i in range(pagecount):
-        if (result["type"] == "web") and (not app_state["settings"]["proxy_webpage"]):
-            page_list.append(f"/doujinshi/{id}/pageinfo/{i}")
-        else:
+        if process_img:
             page_list.append(f"/doujinshi/{id}/page/{i}")
+        else:
+            if (result["type"] == "web") and (not app_state["settings"]["proxy_webpage"]):
+                page_list.append(f"/doujinshi/{id}/pageinfo/{i}")
+            else:
+                page_list.append(f"/doujinshi/{id}/page/{i}")
     return page_list
 
 def cache_page(client, type, id, num, arg1, arg2, arg3 = None): # 缓存页码

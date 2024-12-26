@@ -166,7 +166,7 @@ def get_all_groups(token: str = Depends(oauth2)) -> dict:
     return {"msg": "success", "data": get_group_list(app_state["redis_client"])}
 
 @app.get("/group/{id}")
-def get_doujinshi_by_group_id(id: str, page: int, token: str = Depends(oauth2)) -> dict:
+def get_doujinshi_by_group_id(id: str, page: int = 0, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
         result = get_doujinshi_by_group(app_state["redis_client"], id, page, app_state["settings"]["max_num_perpage"])
@@ -202,7 +202,7 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
         return JSONResponse({"error": f"fail to rename group {id}"}, status_code = 500)
 
 @app.get("/doujinshi")
-def get_doujinshis_by_page(page: int, token: str = Depends(oauth2)) -> dict:
+def get_doujinshis_by_page(page: int = 0, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     return {"msg": "success", "data": get_doujinshi_list(app_state["redis_client"], page,
                         app_state["settings"]["max_num_perpage"])}
@@ -274,13 +274,20 @@ def get_doujinshi_pageinfo_by_number(id: str, num: int, token: str = Depends(oau
 def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)):
     verify_token(token)
     client = app_state["redis_client"]
-    if client.exists(f"doujinshi:{id}") == False:
+    doujinshi_source = client.hget(f"doujinshi:{id}", "source")
+    if doujinshi_source == None:
         return JSONResponse({"error": f"doujinshi {id} does not exist or source not enabled"}, status_code = 404)
     if not client.sismember("cur_read", id):
         client.sadd("cur_read", id) # 先设置状态，防止其他请求创建线程
         threading.Thread(target = read_pages, args = (app_state, id)).start()
     # 文件已存在则无需后续操作
     file_path = f".data/cache/{id}/{num}.jpg"
+    source_object = app_state["sources"][doujinshi_source]
+    if hasattr(source_object, "img_processor") and callable(getattr(source_object, "img_processor")):
+        file_path_ = file_path
+        file_path = file_path.replace(".jpg", "_processed.jpg")
+    else:
+        file_path_ = None
     if os.path.exists(file_path): # 文件已存在，返回文件
         # 检查缓存期限
         if (os.path.getmtime(file_path) + app_state["settings"]["cache_expire"] * 86400) <= time.time():
@@ -288,9 +295,18 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
         else:
             if os.path.getsize(file_path) > 0:
                 return FileResponse(file_path)
+    if not file_path_ == None:
+        tmp_path = file_path
+        file_path = file_path_
+        file_path_ = tmp_path
     client.lpush(f"{id}_pages", num)
     page_status = client.brpop(f"{id}_{num}", timeout = 90) # 等待90s
     if page_status == None:
+        # 等待超时，尝试移除错误文件
+        try:
+            os.remove(file_path)
+        except:
+            pass
         return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500) # 超时
     if page_status[1] == "-1":
         return JSONResponse({"error": f"doujinshi {id} not contain the {num} page"}, 404) # 页码不存在
@@ -298,6 +314,16 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
         return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500)
     if os.path.exists(file_path): # 返回文件
         if os.path.getsize(file_path) > 0:
+            if not file_path_ == None:
+                with open(file_path, "rb") as f:
+                    img_bytes = source_object.img_processor(f.read())
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+                with open(file_path_, "wb") as f:
+                    f.write(img_bytes)
+                return FileResponse(file_path_)
             return FileResponse(file_path)
     return JSONResponse({"error": f"fail to get page {num} of doujinshi {id}"}, status_code = 500)
 
@@ -312,7 +338,7 @@ def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     return JSONResponse({"error": f"doujinshi thumbnail {id} not exist"}, status_code = 404)
 
 @app.get("/search")
-def search(query: str, page: int, source_name: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
+def search(query: str, page: int = 0, source_name: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     query_list = query.lower().split("$,")
     query_list = [item for item in query_list if item != ""]
