@@ -9,7 +9,7 @@ from lib.batch import *
 from lib.database import *
 from fastapi import FastAPI, HTTPException, Depends, status
 from lib.utils import get_file_infos
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 
 app = FastAPI()
@@ -24,13 +24,14 @@ app_state = {
 
 # 自定义 token 验证函数
 def verify_token(token: str):
+    if app_state["settings"]["passwd"] == "":
+        return
     if token != app_state["settings"]["passwd"]:
         raise HTTPException(
             status_code = status.HTTP_401_UNAUTHORIZED,
             detail = "Invalid token",
             headers = {"WWW-Authenticate": "Bearer"},
         )
-    return token
 
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
@@ -330,12 +331,10 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
 @app.get("/doujinshi/{id}/thumbnail")
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     verify_token(token)
-    if id == "nothumb":
-        return FileResponse("nothumb.png")
     thumb_path = f".data/thumb/{id}.jpg"
     if os.path.exists(thumb_path):
         return FileResponse(thumb_path)
-    return JSONResponse({"error": f"doujinshi thumbnail {id} not exist"}, status_code = 404)
+    return FileResponse("nothumb.png")
 
 @app.get("/search")
 def search(query: str, page: int = 0, source_name: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:
