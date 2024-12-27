@@ -27,15 +27,14 @@ python install.py
 
 ```python
 # app_state为程序信息，包括代理设置和数据库等。详细信息见api.py
-def get_cover(app_state, doujinshi: Doujinshi, url) -> None:
+def get_cover(app_state, doujinshi: Doujinshi, url) -> bytes:
   if url != None:
     # 通过url获取
     pass
   else:
     # 通过doujinshi信息获取
     pass
-  with open(f".data/thumb/{doujinshi.id}.jpg", "wb") as f:
-    f.write(res)
+  return img_bytes
 ```
 >注意对一些网站需要适当sleep，防止网站封禁IP
 >
