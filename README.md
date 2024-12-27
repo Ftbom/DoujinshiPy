@@ -141,7 +141,7 @@ class Source:
 云盘
 
 ```
-"name": {"type": "pcloud", config: {"username": "", "passwd": "", "proxy": "", "path": ""}}
+"name": {"type": "pcloud", "config": {"username": "", "passwd": "", "proxy": "", "path": ""}}
 ```
 
 ### local
@@ -149,7 +149,7 @@ class Source:
 本地
 
 ```
-"name": {"type": "local", config: {"path": ""}}
+"name": {"type": "local", "config": {"path": ""}}
 ```
 
 ### wnacg
@@ -157,7 +157,7 @@ class Source:
 网站
 
 ```
-"name": {"type": "wnacg", config: {"proxy": ""}}
+"name": {"type": "wnacg", "config": {"proxy": ""}}
 ```
 
 ### hitomi
@@ -165,7 +165,7 @@ class Source:
 网站
 
 ```
-"name": {"type": "hitomi", config: {"proxy": "", "webp": false}}
+"name": {"type": "hitomi", "config": {"proxy": "", "webp": false}}
 ```
 
 ### ehentai
@@ -175,7 +175,7 @@ class Source:
 若不访问exhentai的内容，不需设置用户信息和cookies。
 
 ```
-"name": {"type": "ehentai", config: {"proxy": "", "exhentai": false}}
+"name": {"type": "ehentai", "config": {"proxy": "", "exhentai": false}}
 ```
 
 若访问exhentai内容，需要设置用户信息或cookies。
@@ -184,7 +184,7 @@ class Source:
 >设置用户名后会忽略cookies设置
 
 ```
-"name": {"type": "ehentai", config: {"proxy": "", "exhentai": true,
+"name": {"type": "ehentai", "config": {"proxy": "", "exhentai": true,
           "user": {"username": "", "passwd": ""}}}
 ```
 
