@@ -50,7 +50,7 @@ def update_settings(settings: SettingValues, token: str = Depends(oauth2)) -> di
         s = json.loads(f.read())
     s["settings"]["proxy_webpage"] = bool(settings.proxy_webpage)
     s["settings"]["max_num_perpage"] = int(settings.max_num_perpage)
-    with open(".data/config.json", "wb") as f:
+    with open(".data/config.json", "w") as f:
         f.write(json.dumps(s, indent = 4))
     return {"msg": "success"}
 
