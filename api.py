@@ -36,8 +36,17 @@ def verify_token(token: str):
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"sources": get_sources(), # 可用源及“插件”
-            "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
+    return {"info": {"proxy_webpage": app_state["settings"]["proxy_webpage"],
+                     "max_num_perpage": app_state["settings"]["max_num_perpage"]},
+                "sources": get_sources(), # 可用源及“插件”
+                "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
+
+@app.post("/settings")
+def update_settings(settings: SettingValues, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
+    app_state["settings"]["proxy_webpage"] = bool(settings.proxy_webpage)
+    app_state["settings"]["max_num_perpage"] = int(settings.max_num_perpage)
+    return {"msg": "success"}
 
 @app.get("/scan")
 def get_scan_status(token: str = Depends(oauth2)) -> dict:
@@ -202,16 +211,16 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
     except:
         return JSONResponse({"error": f"fail to rename group {id}"}, status_code = 500)
 
-@app.get("/doujinshi")
+@app.get("/doujinshi") # 页码从0开始，倒序从-1开始
 def get_doujinshis_by_page(page: int = 0, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     return {"msg": "success", "data": get_doujinshi_list(app_state["redis_client"], page,
                         app_state["settings"]["max_num_perpage"])}
 
 @app.get("/doujinshi/random")
-def get_random_doujinshis(token: str = Depends(oauth2)) -> dict:
+def get_random_doujinshis(num: int = 5, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_random_doujinshi_list(app_state["redis_client"])}
+    return {"msg": "success", "data": get_random_doujinshi_list(app_state["redis_client"], num)}
 
 @app.get("/doujinshi/{id}/metadata")
 def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:

@@ -8,17 +8,19 @@ import remotezip
 from PIL import Image
 from lib.utils import Doujinshi, SourceType
 
-def generate_thumbnail(file_bytes: bytes, thumb_path: str):
+def generate_thumbnail(file_bytes: bytes) -> bytes:
     image = Image.open(io.BytesIO(file_bytes))
     x, y = image.size
     i = 400 / y
     image.thumbnail((x * i, y * i)) # count size
+    img_bytes = io.BytesIO()
     try:
-        image.save(thumb_path)
+        image.save(img_bytes, format = "JPEG")
     except:
-        image.convert('RGB').save(thumb_path)
+        image.convert('RGB').save(img_bytes, format = "JPEG")
+    return img_bytes.getvalue()
 
-def sevenzip_thumbnail(file_path: str, id: str) -> None:
+def sevenzip_thumbnail(file_path: str) -> bytes:
     sevenzip_file = py7zr.SevenZipFile(file_path, "r")
     filelist = sevenzip_file.namelist()
     filelist.sort()
@@ -27,11 +29,12 @@ def sevenzip_thumbnail(file_path: str, id: str) -> None:
         if file.is_directory:
             filelist.remove(file.filename)
     image_bytes = sevenzip_file.read([filelist[0]])[filelist[0]]
-    generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
+    ibytes = generate_thumbnail(image_bytes.read())
     image_bytes.close()
     sevenzip_file.close()
+    return ibytes
 
-def zip_thumbnail(file_path: str, id: str) -> None:
+def zip_thumbnail(file_path: str) -> bytes:
     zip_file = zipfile.ZipFile(file_path, "r")
     filelist = zip_file.namelist()
     filelist.sort()
@@ -40,10 +43,11 @@ def zip_thumbnail(file_path: str, id: str) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with zip_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
+        ibytes = generate_thumbnail(image_bytes.read())
     zip_file.close()
+    return ibytes
 
-def rar_thumbnail(file_path: str, id: str) -> None:
+def rar_thumbnail(file_path: str) -> bytes:
     rar_file = rarfile.RarFile(file_path, "r")
     filelist = rar_file.namelist()
     filelist.sort()
@@ -52,19 +56,20 @@ def rar_thumbnail(file_path: str, id: str) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with rar_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
+        ibytes = generate_thumbnail(image_bytes.read())
     rar_file.close()
+    return ibytes
 
-def local_thumbnail(file_path: str, id: str) -> None:
+def local_thumbnail(file_path: str) -> bytes:
     name, ext = os.path.splitext(file_path)
     if ext in [".zip", ".ZIP"]:
-        zip_thumbnail(file_path, id)
+        return zip_thumbnail(file_path)
     elif ext in [".7z", ".7Z"]:
-        sevenzip_thumbnail(file_path, id)
+        return sevenzip_thumbnail(file_path)
     elif ext in [".rar", ".RAR"]:
-        rar_thumbnail(file_path, id)
+        return rar_thumbnail(file_path)
 
-def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
+def cloud_thumbnail(download_info: dict, sleep_time: float) -> bytes:
     zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
                             support_suffix_range = download_info["suffix_range"], proxies = download_info["proxy"])
     filelist = zip_file.namelist()
@@ -73,17 +78,18 @@ def cloud_thumbnail(download_info: dict, id: str, sleep_time: float) -> None:
         if file.is_dir():
             filelist.remove(file.filename)
     with zip_file.open(filelist[0]) as image_bytes:
-        generate_thumbnail(image_bytes.read(), f".data/thumb/{id}.jpg")
+        ibytes = generate_thumbnail(image_bytes.read())
     zip_file.close()
     time.sleep(sleep_time)
     time.sleep(1)
+    return ibytes
 
-def get_cover(source, proxy, doujinshi: Doujinshi, url) -> None:
+def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
     if doujinshi.type == SourceType.web:
         raise RuntimeError("this source not support generate thumbnail")
     # get file identifier
     file_identifier = source.get_file(doujinshi.identifier)
     if doujinshi.type == SourceType.local:
-        local_thumbnail(file_identifier, doujinshi.id)
+        return local_thumbnail(file_identifier)
     elif doujinshi.type == SourceType.cloud:
-        cloud_thumbnail(file_identifier, doujinshi.id, source.SLEEP)
+        return cloud_thumbnail(file_identifier, source.SLEEP)

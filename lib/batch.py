@@ -63,8 +63,13 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 continue
         # 获取信息
         try:
-            func(app_state["sources"][result["source"]], app_state["settings"]["proxy"],
+            img_bytes = func(app_state["sources"][result["source"]], app_state["settings"]["proxy"],
                  doujinshi_from_json(id, result), url) # 获取封面的函数
+            with open(f".data/thumb/{id}.jpg", "wb") as f:
+                if len(img_bytes) > 0:
+                    f.write(img_bytes)
+                else:
+                    raise RuntimeError("failed to get cover bytes")
             logging.info(f"get cover {id}.jpg")
         except Exception as e:
             logging.error(f"failed to get cover {id}.jpg, error message: {e}")

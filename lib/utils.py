@@ -19,6 +19,10 @@ class StartScan(BaseModel):
     start: bool
     source_name: str
 
+class SettingValues(BaseModel):
+    proxy_webpage: bool
+    max_num_perpage: int
+
 class AddLibrary(BaseModel):
     source_name: str
     target: list[str]
@@ -136,9 +140,19 @@ def get_all_values_from_set(client, key):
 
 # 逐页从list获取数据
 def get_values_from_list_by_page(client, key, page, max_perpage = 15):
-    start = page * max_perpage  # 页面的起始索引
-    end = start + max_perpage - 1  # 页面的结束索引
-    return client.lrange(key, start, end)
+    rev = False
+    if page < 0:
+        rev = True
+    if rev:
+        end = (page + 1) * max_perpage - 1
+        start = end - max_perpage + 1
+        values = client.lrange(key, start, end)
+        values.reverse()
+        return values
+    else:
+        start = page * max_perpage  # 页面的起始索引
+        end = start + max_perpage - 1  # 页面的结束索引
+        return client.lrange(key, start, end)
 
 # 获取list所有数据
 def get_all_values_from_list(client, key, max_perpage = 15):

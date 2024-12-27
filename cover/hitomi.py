@@ -35,7 +35,7 @@ def get_thumbnail(image, id, proxy):
     url = count_subdomain(url, "tn", gg_m, v)
     return url
 
-def get_cover(source, proxy, doujinshi: Doujinshi, url) -> list:
+def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
     if url == None:
         # TODO: search
         return
@@ -49,8 +49,6 @@ def get_cover(source, proxy, doujinshi: Doujinshi, url) -> list:
                        "Referer": f"https://hitomi.la/doujinshi/{url}.html"})
     data = json.loads(res.content[18 :])
     image_url = get_thumbnail(data["files"][0], data["id"], proxy)
-    with open(f".data/thumb/{doujinshi.id}.jpg", "wb") as f:
-        res = requests.get(image_url, proxies = proxy,
-                    headers = {"Referer": f"https://hitomi.la/doujinshi/{id}.html"}).content
-        f.write(res)
     time.sleep(0.5)
+    return requests.get(image_url, proxies = proxy,
+                    headers = {"Referer": f"https://hitomi.la/doujinshi/{id}.html"}).content

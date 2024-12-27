@@ -28,26 +28,21 @@ def get_metadata(client, id: str) -> dict:
 
 def get_doujinshi_list(client, page, max_perpage) -> dict:
     doujinshi = []
-    if page < -1:
-        return doujinshi
-    if page == -1:
-        results = get_all_values_from_list(client, "data:doujinshis", max_perpage)
-    else:
-        results = get_values_from_list_by_page(client, "data:doujinshis", page, max_perpage)
+    results = get_values_from_list_by_page(client, "data:doujinshis", page, max_perpage)
     for result in results:
         doujinshi.append(get_metadata(client, result))
     return doujinshi
 
-def get_random_doujinshi_list(client) -> dict:
+def get_random_doujinshi_list(client, num: int) -> dict:
     # 获取列表的长度
     list_length = client.llen("data:doujinshis")
     if list_length == 0:
         return []
-    # 随机选择一个索引
-    random_index = random.randint(0, max(list_length - 5, 0))
-    results = client.lrange("data:doujinshis", random_index, random_index + 4)
+    # 随机选择生成索引
+    random_indexs = random.sample(range(0, list_length), num)
     doujinshi = []
-    for result in results:
+    for i in random_indexs:
+        result = client.lindex("data:doujinshis", i)
         doujinshi.append(get_metadata(client, result))
     return doujinshi
 
