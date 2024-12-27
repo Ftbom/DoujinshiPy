@@ -108,7 +108,6 @@ def search_doujinshi(client, parameters, max_perpage) -> dict:
     query_key = "tmp:" + generate_id_from_querys(parameters[0], parameters[1], parameters[2])
     if not client.exists(query_key):
         # 筛选并缓存结果
-        results = []
         id_list = []
         tmp_ids = []
         count = 0
@@ -133,14 +132,10 @@ def search_doujinshi(client, parameters, max_perpage) -> dict:
                 pipeline.execute()
                 pipeline.reset()
             pipeline.rpush(query_key, id)
-            if (count >= parameters[3] * max_perpage) and (count < (parameters[3] + 1) * max_perpage):
-                results.append(id)
             count = count + 1
         pipeline.expire(query_key, 1800) # 30min过期
         pipeline.execute()
-    else:
-        # 缓存未过期
-        results = get_values_from_list_by_page(client, query_key, parameters[3], max_perpage)
+    results = get_values_from_list_by_page(client, query_key, parameters[3], max_perpage)
     doujinshi = []
     for result in results:
         if not client.exists(f"doujinshi:{result}"):

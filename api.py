@@ -46,6 +46,12 @@ def update_settings(settings: SettingValues, token: str = Depends(oauth2)) -> di
     verify_token(token)
     app_state["settings"]["proxy_webpage"] = bool(settings.proxy_webpage)
     app_state["settings"]["max_num_perpage"] = int(settings.max_num_perpage)
+    with open(".data/config.json", "rb") as f:
+        s = json.loads(f.read())
+    s["settings"]["proxy_webpage"] = bool(settings.proxy_webpage)
+    s["settings"]["max_num_perpage"] = int(settings.max_num_perpage)
+    with open(".data/config.json", "wb") as f:
+        f.write(json.dumps(s, indent = 4))
     return {"msg": "success"}
 
 @app.get("/scan")
