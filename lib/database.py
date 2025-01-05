@@ -19,7 +19,10 @@ def get_metadata(client, id: str) -> dict:
     group_ids = [item for item in group_ids if item != ""]
     for gid in group_ids:
         groups.append(client.get(f"group:{gid}"))
-    cover_url = f"/doujinshi/{id}/thumbnail"
+    if doujinshi["hascover"] == "1":
+        cover_url = f"/doujinshi/{id}/thumbnail"
+    else:
+        cover_url = "/doujinshi/nothumb/thumbnail"
     if translated_tags == None:
         return {"id": id, "title": doujinshi["title"], "source": doujinshi["source"],
                 "groups": groups, "tags": tags, "cover": cover_url}

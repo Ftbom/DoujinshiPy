@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}
+批量操作
+{% endblock %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-table/dist/bootstrap-table.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between mb-3">
+    <select id="sort" class="form-select w-25">
+        <option value="0" selected>正序</option>
+        <option value="1">倒序</option>
+    </select>
+    <select id="source" class="form-select w-25 ms-2">
+        <option value="" selected>所有源</option>
+    </select>
+    <select id="group" class="form-select w-25 ms-2">
+        <option value="" selected>所有分组</option>
+    </select>
+    <input type="text" id="search" class="form-control w-50 ms-2" placeholder="搜索">
+    <button class="btn btn-primary ms-2" onclick="search()">
+        <i class="bi bi-search"></i>
+    </button>
+</div>
+<div class="table-container">
+    <table class="table table-bordered" data-index="1" id="sortableTable" data-toggle="table" data-unique-id="id" data-sortable="true">
+        <thead class="table-light">
+            <tr>
+                <th data-field="check"><input type="checkbox" onclick="toggleAll(this)"></th>
+                <th data-field="index" data-sortable="true">序号</th>
+                <th data-field="id" data-visible="false">ID</th>
+                <th data-field="title" data-sortable="true">标题</th>
+                <th data-field="tag" data-sortable="true">标签</th>
+                <th data-field="group" data-sortable="true">分组</th>
+                <th data-field="source" data-sortable="true">源</th>
+                <th data-field="cover" data-sortable="true">封面</th>
+                <th style="min-width:121px" data-field="actions">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+<div style="display: flex; justify-content: center;">
+    <button id="load-more" class="btn btn-primary mt-3" onclick="loadMoreData()" style="width: 200px;">加载更多</button>
+</div>
+<div id="progress" style="display: none;margin-top: 10px;">
+    <p id="progress-text" class="progress-text"></p>
+    <div class="progress">
+        <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0"
+            aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
+</div>
+<div class="dropdown-group mt-4">
+    <select id="batch_type" class="form-select">
+        <option value="group" selected>Group</option>
+        <option value="tag">Tag</option>
+        <option value="cover">Cover</option>
+    </select>
+    <select id="batch_value" class="form-select">
+        <option value="new">+新分组</option>
+    </select>
+    <button class="btn btn-success" onclick="handleStart()">开始</button>
+</div>
+</div>
+
+<!-- 添加界面 -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addModalLabel">批量操作可选信息<br><i>用于获取tag或cover</i></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addForm">
+                    <div class="mb-3">
+                        <label for="addInput" class="form-label">URL或ID：</label>
+                        <input type="text" class="form-control" id="addInput" placeholder="在此输入" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="addInput()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑界面 -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">编辑信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <div class="mb-3">
+                        <label for="editTitle" class="form-label">标题：</label>
+                        <input type="text" class="form-control" id="editTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTags" class="form-label">标签：</label>
+                        <input type="text" class="form-control" id="editTags" placeholder="用逗号分隔标签" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="saveEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script>
+<script>
+    let groups = null;
+    let tag_operations = null;
+    let cover_operations = null;
+
+    function changeBatchType() {
+        const type = document.getElementById("batch_type").value;
+        let selectElement = "";
+        if (type == "group") {
+            selectElement = `<option value="new">+新分组</option>`;
+            for (let group of groups) {
+                selectElement += `<option value="${group.id}">${group.name}</option>`;
+            }
+        }
+        else if (type == "tag") {
+            for (let tag of tag_operations) {
+                selectElement += `<option value="${tag.value}" title="${tag.description}">${tag.name}</option>`;
+            }
+        }
+        else if (type == "cover") {
+            for (let cover of cover_operations) {
+                selectElement += `<option value="${cover.value}" title="${cover.description}">${cover.name}</option>`;
+            }
+        }
+        document.getElementById("batch_value").innerHTML = selectElement;
+    }
+
+    //初始化
+    $(document).ready(async function () {
+        $('#sortableTable').bootstrapTable(); //初始化表格
+        const info = await getServerInfo();
+        //源筛选
+        let selectElement = "";
+        for (let source in info.sources) {
+            // 添加新选项
+            selectElement += `<option value="${source}">${source}</option>`;
+        }
+        document.getElementById("source").innerHTML += selectElement;
+        tag_operations = info.batch_operations.tag;
+        cover_operations = info.batch_operations.cover;
+        groups = await getGroups();
+        //组筛选 
+        selectElement = "";
+        for (let group of groups) {
+            // 添加新选项
+            selectElement += `<option value="${group.id}">${group.name}</option>`;
+        }
+        document.getElementById("group").innerHTML += selectElement;
+        document.getElementById("batch_value").innerHTML += selectElement;
+        document.getElementById("batch_type").value = "group";
+        document.getElementById("batch_type").addEventListener("change", changeBatchType);
+        //调整表格
+        const table_headers = document.querySelectorAll("th");
+        table_headers[0].style = "width:30px";
+        table_headers[1].style = "width:70px";
+        table_headers[2].style = "min-width:180px";
+        table_headers[3].style = "min-width:180px";
+        table_headers[4].style = "min-width:180px";
+        table_headers[5].style = "min-width:180px";
+        table_headers[6].style = "width:70px";
+        table_headers[7].style = "width:121px";
+    });
+</script>
+<script>
+    let progress = 0; //进度记录
+    let progressBar = document.getElementById('progress-bar');
+    let progressText = document.getElementById('progress-text');
+    let progressContainer = document.getElementById('progress');
+
+    function handleProgress(url) {
+        if (progress >= 100) {
+            progress = 0;
+        }
+        // 显示进度条
+        progressContainer.style.display = "block";
+        // 每秒查询进度
+        let interval = setInterval(async function () {
+            let result = await getProgress(url); //查询进度信息
+            //更新进度信息
+            progress = result[0] / result[1] * 100;
+            progress = progress.toFixed(2);
+            progressBar.style.width = progress + '%';
+            progressBar.setAttribute('aria-valuenow', progress);
+            progressBar.innerText = progress + '%';
+            progressText.innerText = "进度：" + result[0] + "/" + result[1];
+            if (progress >= 100) {
+                clearInterval(interval); // 达到100%时停止更新
+                startBatch = false; //清空操作标志位
+                setTimeout(() => {
+                    search();
+                }, 800);
+            }
+        }, 1000);
+    }
+</script>
+<script>
+    async function search() {
+        document.getElementById("sortableTable").dataset.index = "1";
+        $('#sortableTable').bootstrapTable('removeAll');
+        await loadMoreData();
+    }
+
+    async function loadMoreData() {
+        // 获取当前查询信息
+        const search_page = parseInt(document.getElementById("sortableTable").dataset.index);
+        const search_group = document.getElementById("group").value;
+        const search_source = document.getElementById("source").value;
+        const search_sort = parseInt(document.getElementById("sort").value);
+        const search_query = document.getElementById("search").value;
+        let tableDatas = await getDatas(search_query, search_group, search_source, search_page, search_sort); //获取数据
+        let index = $('#sortableTable').bootstrapTable('getOptions').totalRows;
+        for (let data of tableDatas) {
+            //生成tag字符串
+            var tags_element = `<div class="tag-badge-wrapper">`;
+            for (let tag of data.tags) {
+                tags_element += `<span class="tag-badge">${tag}</span>`;
+            }
+            tags_element += `</div>`;
+            //生成group字符串
+            var groups_element = `<div class="group-badge-wrapper">`;
+            for (let group of data.groups) {
+                groups_element += `<span class="group-badge">${group}</span>`;
+            }
+            groups_element += `</div>`;
+            const hascover_str = data.hascover.toString();
+            const newData = {
+                check: `<input type="checkbox">`,
+                index: index.toString(),
+                id: data.id,
+                title: data.title,
+                tag: tags_element,
+                group: groups_element,
+                source: data.source,
+                cover: hascover_str.charAt(0).toUpperCase() + hascover_str.slice(1),
+                actions: `
+                        <button class="btn btn-success btn-sm" onclick="handleAdd('${data.id}')">
+                            <i class="bi bi-box-seam"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="handleEdit('${data.id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="handleDelete('${data.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `
+            };
+            //添加表格新数据
+            $('#sortableTable').bootstrapTable('append', newData);
+            index += 1;
+        }
+        document.getElementById("sortableTable").dataset.index = (search_page + 1).toString();
+    }
+</script>
+<script>
+    let startBatch = false; //操作标志位，防止重复提交
+    let currentID = null;
+    let batch_settings = {};
+
+    function toggleAll(source) { //全选
+        const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]');
+        checkboxes.forEach(checkbox => checkbox.checked = source.checked);
+    }
+
+    function handleAdd(id) { //显示添加界面
+        currentID = id;
+        const modal = new bootstrap.Modal(document.getElementById('addModal'));
+        modal.show();
+    }
+
+    function addInput() { //添加数据
+        const inputValue = document.getElementById('addInput').value;
+        if (inputValue.trim()) {
+            batch_settings[currentID] = inputValue; //保存数据
+        }
+        //隐藏添加界面
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
+        modal.hide();
+        document.getElementById('addForm').reset();
+    }
+
+    function handleEdit(id) {
+        currentID = id;
+        const row = $(`#sortableTable tr[data-uniqueid="${currentID}"]`)[0];
+        const title = row.querySelector('td:nth-child(3)').innerText;
+        const tags = Array.from(row.querySelectorAll('.tag-badge')).map(tag => tag.innerText).join(',');
+        //设置初始值
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editTags').value = tags;
+        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+        modal.show();
+    }
+
+    function saveEdit() {
+        const title = document.getElementById('editTitle').value;
+        const tags = document.getElementById('editTags').value.split(',')
+            .map(tag => tag.trim()).filter(item => item !== '');
+        const row = $(`#sortableTable tr[data-uniqueid="${currentID}"]`)[0];
+        if (updateMetadata(currentID, title, tags)) {
+            //生成tag字符串
+            var tags_element = `<div class="tag-badge-wrapper">`;
+            for (let tag of tags) {
+                tags_element += `<span class="tag-badge">${tag}</span>`;
+            }
+            tags_element += `</div>`;
+            //更新数据
+            $('#sortableTable').bootstrapTable('updateCellByUniqueId', {
+                id: currentID,
+                field: 'title', value: title
+            });
+            $('#sortableTable').bootstrapTable('updateCellByUniqueId', {
+                id: currentID,
+                field: 'tag', value: tags_element
+            });
+        }
+        //关闭窗口
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+        modal.hide();
+        document.getElementById('editForm').reset();
+    }
+
+    async function handleDelete(id) {
+        const result = await deleteMetadata(id);
+        if (result) {
+            $('#sortableTable').bootstrapTable('removeByUniqueId', id);
+        }
+    }
+
+    function handleStart() {
+        if (startBatch) {
+            alert("请不要重复提交任务！");
+            return;
+        }
+        const rows = document.querySelectorAll('tbody tr');
+        if (rows[0].classList[0] == "no-records-found") {
+            return;
+        }
+        const inputs = [];
+        rows.forEach(row => { //获取每行数据
+            if (row.querySelector('td:nth-child(1)').querySelector("input").checked) {
+                const row_id = row.dataset.uniqueid;
+                if (row_id in batch_settings) {
+                    inputs.push([
+                        row_id,
+                        batch_settings[row_id]
+                    ])
+                }
+                else {
+                    inputs.push(row_id);
+                }
+            }
+        });
+        if (inputs.length == 0) {
+            return;
+        }
+        const batch_type = document.getElementById('batch_type').value;
+        let batch_value = document.getElementById('batch_value').value;
+        if ((batch_type == "group") && (batch_value == "new")) {
+            batch_value = prompt("输入新Group名称："); //输入新名称
+            if (batch_value == null) {
+                return;
+            }
+        }
+        setBatch(batch_type, batch_value, inputs); //开始批量操作
+        startBatch = true; //设置标志位
+        handleProgress("/batch"); //显示进度条
+    }
+</script>
+{% endblock %}

@@ -54,24 +54,31 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 id = str(id[0])
         else:
             url = None
+        cover_path = f".data/thumb/{id}.jpg"
         result = client.hgetall(f"doujinshi:{id}")
         if result == {}:
             logging.warning(f"don't find id {id}, skip getting cover")
             continue
         if not replace_old:
-            if os.path.exists(f".data/thumb/{id}.jpg"):
+            if os.path.exists(cover_path):
                 continue
         # 获取信息
         try:
             img_bytes = func(app_state["sources"][result["source"]], app_state["settings"]["proxy"],
                  doujinshi_from_json(id, result), url) # 获取封面的函数
-            with open(f".data/thumb/{id}.jpg", "wb") as f:
-                if len(img_bytes) > 0:
+            if len(img_bytes) > 0:
+                with open(cover_path, "wb") as f:
                     f.write(img_bytes)
-                else:
-                    raise RuntimeError("failed to get cover bytes")
+                client.hset(f"doujinshi:{id}", "hascover", 1)
+            else:
+                raise RuntimeError("failed to get cover bytes")
             logging.info(f"get cover {id}.jpg")
         except Exception as e:
+            if os.path.exists(cover_path) and (os.path.getsize(cover_path) == 0):
+                try:
+                    os.remove(cover_path)
+                except:
+                    pass
             logging.error(f"failed to get cover {id}.jpg, error message: {e}")
     client.set("batch_operation", "finished")
 

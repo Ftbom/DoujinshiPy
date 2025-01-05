@@ -346,6 +346,8 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
 @app.get("/doujinshi/{id}/thumbnail")
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     verify_token(token)
+    if id == "nothumb":
+        return FileResponse("nothumb.png")
     thumb_path = f".data/thumb/{id}.jpg"
     if os.path.exists(thumb_path):
         return FileResponse(thumb_path)

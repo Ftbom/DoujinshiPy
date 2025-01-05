@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}
+Group操作
+{% endblock %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-table/dist/bootstrap-table.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block main %}
+<div class="table-container">
+    <table class="table table-bordered" id="sortableTable" data-toggle="table" data-unique-id="id" data-sortable="true">
+        <thead class="table-light">
+            <tr>
+                <th data-field="index" data-sortable="true">序号</th>
+                <th data-field="id" data-visible="false">ID</th>
+                <th data-field="name" data-sortable="true">名称</th>
+                <th data-field="actions">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<!-- 编辑界面 -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">编辑名称</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">名称：</label>
+                        <input type="text" class="form-control" id="editName" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="saveEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script>
+<script>
+    //初始化表格
+    $(document).ready(async function () {
+        $('#sortableTable').bootstrapTable();
+        await updateTable();
+    });
+</script>
+<script>
+    async function updateTable() {
+        let tableDatas = await getGroup();
+        let index = 0;
+        for (let data of tableDatas) {
+            let newData = {
+                index: index.toString(),
+                id: data.id,
+                name: data.name,
+                actions: `
+                        <button class="btn btn-warning btn-sm" onclick="handleEdit('${data.id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="handleDelete('${data.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `
+            };
+            //添加表格数据
+            $('#sortableTable').bootstrapTable('append', newData);
+            index += 1;
+        }
+    }
+</script>
+<script>
+    let currentID = null;
+
+    function handleEdit(id) {
+        currentID = id;
+        const row = $('#sortableTable').bootstrapTable('getRowByUniqueId', currentID);
+        const name = row.name;
+        //设置初始值
+        document.getElementById('editName').value = name;
+        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+        modal.show();
+    }
+
+    async function saveEdit() {
+        const name = document.getElementById('editName').value;
+        const row = $('#sortableTable').bootstrapTable('getRowByUniqueId', currentID);
+        const result = await updateGroup(row.id, name);
+        if (result) {
+            $('#sortableTable').bootstrapTable('updateCellByUniqueId', {
+                id: row.id,
+                field: 'name', value: name
+            });
+        }
+        //关闭窗口
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+        modal.hide();
+        document.getElementById('editForm').reset();
+    }
+
+    async function handleDelete(id) {
+        const result = await deleteGroup(id);
+        if (result) {
+            $('#sortableTable').bootstrapTable('removeByUniqueId', id);
+        }
+    }
+</script>
+{% endblock %}

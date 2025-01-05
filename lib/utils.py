@@ -140,6 +140,8 @@ def get_all_values_from_set(client, key):
 
 # 逐页从list获取数据
 def get_values_from_list_by_page(client, key, page, max_perpage = 15):
+    if page == 0:
+        return get_all_values_from_list(client, key, max_perpage)
     rev = False
     if page < 0:
         rev = True
@@ -150,6 +152,7 @@ def get_values_from_list_by_page(client, key, page, max_perpage = 15):
         values.reverse()
         return values
     else:
+        page = page - 1
         start = page * max_perpage  # 页面的起始索引
         end = start + max_perpage - 1  # 页面的结束索引
         return client.lrange(key, start, end)
@@ -157,7 +160,7 @@ def get_values_from_list_by_page(client, key, page, max_perpage = 15):
 # 获取list所有数据
 def get_all_values_from_list(client, key, max_perpage = 15):
     results = []
-    page = 0
+    page = 1
     while True:
         # 获取当前页的数据
         page_results = get_values_from_list_by_page(client, key, page, max_perpage)
@@ -202,6 +205,7 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, back
     did = str(doujinshi.id)
     doujinshi_metadata = {
         "title": doujinshi.title,
+        "hascover": int(os.path.exists(f".data/thumb/{did}.jpg")),
         "pagecount": pagecount,
         "tags": doujinshi.tags,
         "groups": doujinshi.groups,

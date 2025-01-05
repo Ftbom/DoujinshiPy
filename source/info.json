@@ -1,23 +1,30 @@
 {
     "local": {
+        "web": false,
         "description": "本地文件"
     },
     "onedrive": {
+        "web": false,
         "description": "Onedrive文件"
     },
     "pcloud": {
+        "web": false,
         "description": "Pcloud文件"
     },
     "wnacg": {
+        "web": true,
         "description": "绅士漫画"
     },
     "ehentai": {
+        "web": true,
         "description": "E-hentai/Exhentai"
     },
     "hitomi": {
+        "web": true,
         "description": "Hitomi"
     },
     "pornhunter": {
+        "web": true,
         "description": "欧美色图"
     }
 }

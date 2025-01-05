@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}
+其他操作
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block main %}
+<!-- 库操作部分 -->
+<div class="section">
+    <div class="title">库操作</div>
+    <div class="input-row">
+        <label for="Source">普通源:</label>
+        <select id="Source">
+        </select>
+        <button onclick="handleScan()">扫描</button>
+    </div>
+    <div class="input-row">
+        <label for="webSource">WEB源:</label>
+        <select id="webSource">
+        </select>
+        <button onclick="handleAdd()">添加</button>
+    </div>
+    <div class="input-row">
+        <label for="editBox">链接：</label>
+        <textarea id="editBox" style="max-width: 600px;" placeholder="添加到WEB源的链接，使用,分隔多个链接" class="edit-box"></textarea>
+    </div>
+    <div id="progress" style="display: none;margin-top: 10px;">
+        <p id="progress-text" class="progress-text"></p>
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"
+                aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+        </div>
+    </div>
+</div>
+
+<!-- 设置操作部分 -->
+<div class="section">
+    <div class="title">设置操作</div>
+    <div class="input-row">
+        <label for="proxy">代理WEB图片:</label>
+        <input type="checkbox" id="proxy" class="bool-checkbox">
+    </div>
+    <div class="input-row">
+        <label for="maxPerPage">每页最大数量:</label>
+        <input type="number" id="maxPerPage">
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function saveSettings() {
+        let num = document.getElementById("maxPerPage").value;
+        try {
+            num = parseInt(num);
+            if (!isNaN(num)) {
+                updateSettings(document.getElementById("proxy").checked, num);
+            }
+        }
+        catch (e) {}
+    }
+
+    document.getElementById("proxy").addEventListener("click", saveSettings);
+    document.getElementById("maxPerPage").addEventListener("input", saveSettings);
+    $(document).ready(async function () {
+        //更新界面
+        const info = await getServerInfo();
+        var source_element = "";
+        var websource_element = "";
+        for (let name in info.sources) {
+            if (info.sources[name].web) {
+                websource_element += `<option value="${name}">${name}</option>`;
+            }
+            else
+            {
+                source_element += `<option value="${name}">${name}</option>`;
+            }
+        }
+        document.getElementById("Source").innerHTML = source_element;
+        document.getElementById("webSource").innerHTML = websource_element;
+        document.getElementById("proxy").checked = info.info.proxy_webpage;
+        document.getElementById("maxPerPage").value = info.info.max_num_perpage;
+    });
+</script>
+<script>
+    let startBatch = false; //操作标志位，防止重复提交
+    let progress = 0; //进度记录
+    let progressBar = document.getElementById('progress-bar');
+    let progressText = document.getElementById('progress-text');
+    let progressContainer = document.getElementById('progress');
+
+    function handleProgress(url) {
+        if (progress >= 100) {
+            progress = 0;
+        }
+        // 显示进度条
+        progressContainer.style.display = "block";
+        // 每秒查询进度
+        let interval = setInterval(async function () {
+            let result = await getProgress(url); //查询进度信息
+            //更新进度信息
+            if (result.length == 1)
+            {
+                progressText.innerText = result[0];
+                if (result[0] == "scanning has not started")
+                {
+                    clearInterval(interval); // 达到100%时停止更新
+                    startBatch = false; //清空操作标志位
+                }
+            }
+            else
+            {
+                progress = result[0] / result[1] * 100;
+                progress = progress.toFixed(2);
+                progressBar.style.width = progress + '%';
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.innerText = progress + '%';
+                progressText.innerText = "进度：" + result[0] + "/" + result[1];
+                if (progress >= 100) {
+                    clearInterval(interval); // 达到100%时停止更新
+                    startBatch = false; //清空操作标志位
+                }
+            }
+        }, 1000);
+    }
+
+    function handleScan() {
+        if (startBatch) {
+            alert("请不要重复提交任务！");
+            return;
+        }
+        //开始批量操作
+        scanSource(document.getElementById("Source").value);
+        startBatch = true; //设置标志位
+        handleProgress("/scan"); //显示进度条
+    }
+
+    function handleAdd() {
+        if (startBatch) {
+            alert("请不要重复提交任务！");
+            return;
+        }
+        //开始批量操作
+        const datas = [];
+        for (let url of document.getElementById("editBox").value.split(",")) {
+            url = url.trim();
+            if (url != "") {
+                datas.push(url);
+            }
+        }
+        if (datas.length > 0) {
+            addSource(document.getElementById("webSource").value, datas);
+        }
+        startBatch = true; //设置标志位
+        handleProgress("/add"); //显示进度条
+    }
+</script>
+{% endblock %}

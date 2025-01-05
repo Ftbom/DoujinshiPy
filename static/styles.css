@@ -1,0 +1,154 @@
+body {
+    background-color: #f9f9f9;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.progress-text {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.dropdown-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.dropdown-group select,
+.dropdown-group button {
+    flex: 1;
+    margin: 0 5px;
+}
+
+.tag-badge {
+    display: inline-block;
+    background-color: #e7f3fe;
+    color: #007bff;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.group-badge {
+    display: inline-block;
+    background-color: #eafbea;
+    color: #28a745;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.table-container {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+th {
+    text-align: center;
+    word-wrap: break-word;
+    /* 允许内容换行 */
+    white-space: normal;
+    /* 禁止单行显示，允许换行 */
+    max-width: 200px;
+    /* 限制最大宽度，避免超出 */
+    overflow-wrap: break-word;
+    /* 强制长单词换行 */
+    word-break: break-word;
+    /* 允许单词在超出时换行 */
+}
+
+/* 确保td中的文本也能换行 */
+td {
+    text-align: center;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.tag-badge-wrapper,
+.group-badge-wrapper {
+    max-height: 100px;
+    /* 设置最大高度 */
+    overflow-y: auto;
+    /* 超过最大高度时垂直滚动 */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.section .title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    justify-content: space-between;
+}
+
+.input-row label {
+    margin-right: 15px;
+    width: 120px;
+    font-weight: normal;
+    text-align: right;
+}
+
+.input-row input,
+.input-row select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 180px;
+}
+
+.input-row button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 120px;
+    margin-left: 10px;
+}
+
+.input-row button:hover {
+    background-color: #0056b3;
+}
+
+.input-row .bool-checkbox {
+    width: 20px;
+    height: 20px;
+}
+
+.input-row .edit-box {
+    width: 100%;
+    height: 60px;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+}
