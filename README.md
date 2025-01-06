@@ -30,7 +30,7 @@ python app.py
   >`http://127.0.0.1:9000/docs`或`http://127.0.0.1:9000/redoc`
 * doujinshi管理后台
   >`http://127.0.0.1:9000/admin`
-* [tachiyomi插件]()
+* [tachiyomi插件](https://github.com/Ftbom/tachiyomi_doujinshione_code)
 
 ## doujinshi来源
 

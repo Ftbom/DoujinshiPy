@@ -272,7 +272,10 @@ def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = F
         for t in tags:
             if not t in old_tags:
                 old_tags.append(t)
-    client.hset(f"doujinshi:{id}", "tags", "|".join(old_tags).strip("|"))
+    old_tags = "|".join(old_tags).strip("|")
+    client.hset(f"doujinshi:{id}", "tags", old_tags)
+    if client.exists("ehtag:other"):
+        client.hset(f"doujinshi:{id}", "translated_tags", translate_tags(client, old_tags))
     if title != None:
         client.hset(f"doujinshi:{id}", "title", title)
     mark_modified(client, id)

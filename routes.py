@@ -47,6 +47,7 @@ def login():
             session_id = str(uuid.uuid4())
             client = app_state["redis_client"]
             client.sadd("session_id", session_id) # 储存session id
+            client.expire("session_id", 60*60*24*7)
             response = make_response(jsonify(success=True))
             response.set_cookie("session_id", session_id, max_age=60*60*24*7)  # 7天
             return response

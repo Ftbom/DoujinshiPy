@@ -30,7 +30,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
             logging.warning(f"don't find id {id}, skip setting group")
         else:
             logging.info(f"set group for {id}")
-        client.set("batch_operation", f"setting group {count}/{num}")
+        client.set("batch_operation", f"finish setting group {count}/{num}")
     client.set("batch_operation", "finished")
 
 def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> None:
@@ -39,7 +39,6 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
     count = 0
     for id in id_list:
         count = count + 1
-        client.set("batch_operation", f"getting cover {count}/{num}")
         # 处理id，可为字符串或列表（二元）
         if (type(id) != str) and (type(id) != list):
             continue
@@ -80,6 +79,7 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 except:
                     pass
             logging.error(f"failed to get cover {id}.jpg, error message: {e}")
+        client.set("batch_operation", f"finish getting cover {count}/{num}")
     client.set("batch_operation", "finished")
 
 def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> None:
@@ -88,7 +88,6 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
     count = 0
     for id in id_list:
         count = count + 1
-        client.set("batch_operation", f"getting tag {count}/{num}")
         if (type(id) != str) and (type(id) != list):
             continue
         if (type(id) == list):
@@ -113,5 +112,6 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
                 logging.info(f"get tag for {id}")
             except:
                 logging.error(f"failed to get tag for {id}")
+        client.set("batch_operation", f"finish getting tag {count}/{num}")
     client.set("batch_operation", "finished")
         

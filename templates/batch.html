@@ -137,7 +137,7 @@
         if (type == "group") {
             selectElement = `<option value="new">+新分组</option>`;
             for (let group of groups) {
-                selectElement += `<option value="${group.id}">${group.name}</option>`;
+                selectElement += `<option value="${group.name}">${group.name}</option>`;
             }
         }
         else if (type == "tag") {
@@ -174,6 +174,11 @@
             selectElement += `<option value="${group.id}">${group.name}</option>`;
         }
         document.getElementById("group").innerHTML += selectElement;
+        selectElement = "";
+        for (let group of groups) {
+            // 添加新选项
+            selectElement += `<option value="${group.name}">${group.name}</option>`;
+        }
         document.getElementById("batch_value").innerHTML += selectElement;
         document.getElementById("batch_type").value = "group";
         document.getElementById("batch_type").addEventListener("change", changeBatchType);
@@ -291,6 +296,12 @@
 
     function handleAdd(id) { //显示添加界面
         currentID = id;
+        if (id in batch_settings) {
+            document.getElementById('addInput').value = batch_settings[id];
+        }
+        else {
+            document.getElementById('addInput').value = "";
+        }
         const modal = new bootstrap.Modal(document.getElementById('addModal'));
         modal.show();
     }

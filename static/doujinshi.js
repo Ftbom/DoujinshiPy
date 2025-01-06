@@ -1,18 +1,17 @@
+const token = localStorage.getItem("token");
+
 async function getServerInfo() {
-    const token = sessionStorage.getItem("token");
     const res = await fetch("/", { headers: { Authorization: "Bearer " + token } });
     return JSON.parse(await res.text());
 }
 
 async function getGroups() {
-    const token = sessionStorage.getItem("token");
     const res = await fetch("/group", { headers: { Authorization: "Bearer " + token } });
     return JSON.parse(await res.text()).data;
 }
 
 let count = 1;
 async function getProgress(url) {
-    const token = sessionStorage.getItem("token");
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     let result = JSON.parse(await res.text());
     if (url.search("scan") != -1) {
@@ -27,7 +26,6 @@ async function getProgress(url) {
 }
 
 async function getDatas(query, group, source, page, reverse) {
-    const token = sessionStorage.getItem("token");
     if (reverse) {
         page = -page;
     }
@@ -48,7 +46,6 @@ async function getDatas(query, group, source, page, reverse) {
 }
 
 function setBatch(type, value, datas) {
-    const token = sessionStorage.getItem("token");
     fetch("/batch", {
         method: "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
@@ -62,7 +59,6 @@ function setBatch(type, value, datas) {
 }
 
 async function updateMetadata(id, title, tags) {
-    const token = sessionStorage.getItem("token");
     const res = await fetch(`/doujinshi/${id}/metadata`, {
         method: "PUT",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
@@ -79,7 +75,6 @@ async function updateMetadata(id, title, tags) {
 }
 
 async function deleteMetadata(id) {
-    const token = sessionStorage.getItem("token");
     const res = await fetch(`/doujinshi/${id}/metadata`, {
         method: "DELETE",
         headers: { Authorization: "Bearer " + token }
@@ -92,14 +87,12 @@ async function deleteMetadata(id) {
 }
 
 async function getGroup() {
-    const token = sessionStorage.getItem("token");
     const res = await fetch("/group", { headers: { Authorization: "Bearer " + token } });
     let result = JSON.parse(await res.text());
     return result.data;
 }
 
 async function updateGroup(id, name) {
-    const token = sessionStorage.getItem("token");
     const res = await fetch("/group/" + id, {
         method: "PUT",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
@@ -113,7 +106,6 @@ async function updateGroup(id, name) {
 }
 
 async function deleteGroup(id) {
-    const token = sessionStorage.getItem("token");
     const res = await fetch("/group/" + id, {
         method: "DELETE",
         headers: { Authorization: "Bearer " + token }
@@ -126,7 +118,6 @@ async function deleteGroup(id) {
 }
 
 function scanSource(source) {
-    const token = sessionStorage.getItem("token");
     fetch("/scan", {
         method: "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
@@ -138,7 +129,6 @@ function scanSource(source) {
 }
 
 function addSource(source, datas) {
-    const token = sessionStorage.getItem("token");
     fetch("/add", {
         method: "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
@@ -151,7 +141,6 @@ function addSource(source, datas) {
 }
 
 function updateSettings(proxy_img, num) {
-    const token = sessionStorage.getItem("token");
     fetch("/settings", {
         method: "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },

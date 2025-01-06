@@ -45,5 +45,5 @@ class Source:
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
         soup = BeautifulSoup(res.content, "html.parser")
         for img in soup.find("ul", class_ = "list-gallery").find_all("img"):
-            urls.append(img.attrs["src"].replace("_w400.", "_1200."))
+            urls.append(img.attrs["src"].replace("_w400.", "."))
         return {"urls": urls, "headers": {}}
