@@ -32,6 +32,24 @@ python app.py
   >`http://127.0.0.1:9000/admin`
 * [tachiyomi插件](https://github.com/Ftbom/tachiyomi_doujinshione_code)
 
+## 功能说明
+
+### Tag翻译
+
+* 数据来源：[EhTagTranslation](https://github.com/EhTagTranslation/Database/releases)
+* 当tag形式为`tag_type:tag_value`时，只翻译tag_value部分
+
+### 搜索
+
+* 搜索关键词匹配tag或title
+* 关键词格式`query1$,query2$,query3`
+* 启用tag翻译后，关键词也匹配翻译后的tag
+
+### 页码
+
+* 页码从1开始，为正数时返回正序结果，负数时返回倒序结果
+* 页码为0时，返回所有结果
+
 ## doujinshi来源
 
 [Sources](SOURCES.md)
