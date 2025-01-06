@@ -178,7 +178,11 @@ def translate_tags(client, tags):
     for tag in tags:
         tag_parts = tag.split(":")
         if len(tag_parts) == 1:
-            new_tags.append(tag)
+            value = client.hget("ehtag:other", tag.lower())
+            if not value == None:
+                new_tags.append(value)
+            else:
+                new_tags.append(tag)
         else:
             tag_type = tag_parts[0].strip()
             tag_value = tag_parts[1].strip()
@@ -187,7 +191,7 @@ def translate_tags(client, tags):
             else:
                 tag_type_ = tag_type
             if client.exists(f"ehtag:{tag_type_}"):
-                value = client.hget(f"ehtag:{tag_type_}", tag_value)
+                value = client.hget(f"ehtag:{tag_type_}", tag_value.lower())
                 if not value == None:
                     new_tags.append(f"{tag_type}:{value}")
                 else:
@@ -254,6 +258,20 @@ def set_group_of_doujinshi(client, gid: str, target_id, replace_old: bool = Fals
         groups.append(gid)
     client.hset(f"doujinshi:{target_id}", "groups", "|".join(groups).strip("|"))
     client.rpush(f"data:group_{gid}", target_id)
+    mark_modified(client, target_id)
+    return True
+
+# 从group中删除doujinshi
+def rm_group_of_doujinshi(client, gid: str, target_id) -> bool:
+    groups = client.hget(f"doujinshi:{target_id}", "groups")
+    if groups == None:
+        return False
+    groups = groups.split("|")
+    if not gid in groups:
+        return True
+    groups.remove(gid)
+    client.hset(f"doujinshi:{target_id}", "groups", "|".join(groups).strip("|"))
+    client.lrem(f"data:group_{gid}", 0, target_id)
     mark_modified(client, target_id)
     return True
 

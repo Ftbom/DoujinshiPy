@@ -3,7 +3,8 @@ import hashlib
 import random
 import logging
 from lib.utils import (get_values_from_list_by_page, get_all_values_from_list, get_all_values_from_set, 
-                       delete_group_from_redis, set_name_of_group,set_metadata_of_doujinshi, delete_doujinshi_from_redis)
+                       delete_group_from_redis, set_name_of_group,set_metadata_of_doujinshi, delete_doujinshi_from_redis,
+                       set_group_of_doujinshi, rm_group_of_doujinshi)
 
 def get_metadata(client, id: str) -> dict:
     doujinshi = client.hgetall(f"doujinshi:{id}")
@@ -183,3 +184,13 @@ def delete_group_by_id(client, id: str) -> bool:
     delete_group_from_redis(client, id)
     logging.info(f"delete group {id}")
     return True
+
+def add_to_group(client, id: str, did: str) -> bool:
+    if not client.sismember("data:groups", id):
+        return False
+    return set_group_of_doujinshi(client, id, did, False)
+
+def delete_from_group(client, id: str, did: str) -> bool:
+    if not client.sismember("data:groups", id):
+        return False
+    return rm_group_of_doujinshi(client, id, did)

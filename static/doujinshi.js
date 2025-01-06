@@ -1,4 +1,6 @@
 const token = localStorage.getItem("token");
+let rm_group = false;
+let rm_group_progress = [0, 1];
 
 async function getServerInfo() {
     const res = await fetch("/", { headers: { Authorization: "Bearer " + token } });
@@ -12,6 +14,9 @@ async function getGroups() {
 
 let count = 1;
 async function getProgress(url) {
+    if (rm_group) {
+        return rm_group_progress;
+    }
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     let result = JSON.parse(await res.text());
     if (url.search("scan") != -1) {
@@ -45,7 +50,23 @@ async function getDatas(query, group, source, page, reverse) {
     return datas;
 }
 
-function setBatch(type, value, datas) {
+async function setBatch(type, value, datas) {
+    if (type == "group_rm") {
+        rm_group = true;
+        rm_group_progress[0] = 0;
+        rm_group_progress[1] = datas.length;
+        for (let data of datas) {
+            await fetch(`/group/${value}/${data}`, {
+                method: "DELETE",
+                headers: { Authorization: "Bearer " + token}});
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            rm_group_progress[0] += 1;
+        }
+        return;
+    }
+    else {
+        rm_group = false;
+    }
     fetch("/batch", {
         method: "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },

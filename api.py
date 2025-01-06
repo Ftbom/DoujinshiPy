@@ -217,6 +217,28 @@ def update_group_name(id: str, group_name: GroupName, token: str = Depends(oauth
     except:
         return JSONResponse({"error": f"fail to rename group {id}"}, status_code = 500)
 
+@app.delete("/group/{id}/{did}")
+def delete_doujinshi_from_group(id: str, did: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
+    try:
+        if delete_from_group(app_state["redis_client"], id, did):
+            return {"msg": f"success to delete doujinshi {did} from group {id}"}
+        else:
+            return JSONResponse({"error": f"group {id} or doujinshi {did} not exists"}, status_code = 404)
+    except:
+        return JSONResponse({"error": f"fail to delete doujinshi {did} from group {id}"}, status_code = 500)
+
+@app.put("/group/{id}/{did}")
+def add_doujinshi_to_group(id: str, did: str, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
+    try:
+        if add_to_group(app_state["redis_client"], id, did):
+            return {"msg": f"success to add doujinshi {did} to group {id}"}
+        else:
+            return JSONResponse({"error": f"group {id} or doujinshi {did} not exists"}, status_code = 404)
+    except:
+        return JSONResponse({"error": f"fail to add doujinshi {did} to group {id}"}, status_code = 500)
+
 @app.get("/doujinshi") # 页码从0开始，倒序从-1开始
 def get_doujinshis_by_page(page: int = 0, token: str = Depends(oauth2)) -> dict:
     verify_token(token)

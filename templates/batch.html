@@ -60,9 +60,10 @@
 </div>
 <div class="dropdown-group mt-4">
     <select id="batch_type" class="form-select">
-        <option value="group" selected>Group</option>
-        <option value="tag">Tag</option>
-        <option value="cover">Cover</option>
+        <option value="group" selected>添加到分组</option>
+        <option value="group_rm" selected>从分组删除</option>
+        <option value="tag">获取Tag</option>
+        <option value="cover">获取封面</option>
     </select>
     <select id="batch_value" class="form-select">
         <option value="new">+新分组</option>
@@ -138,6 +139,11 @@
             selectElement = `<option value="new">+新分组</option>`;
             for (let group of groups) {
                 selectElement += `<option value="${group.name}">${group.name}</option>`;
+            }
+        }
+        if (type == "group_rm") {
+            for (let group of groups) {
+                selectElement += `<option value="${group.id}">${group.name}</option>`;
             }
         }
         else if (type == "tag") {
@@ -220,7 +226,12 @@
                 clearInterval(interval); // 达到100%时停止更新
                 startBatch = false; //清空操作标志位
                 setTimeout(() => {
-                    search();
+                    if (update_groups) {
+                        window.location.href = '/admin/batch'; //刷新界面
+                    }
+                    else {
+                        search();
+                    }
                 }, 800);
             }
         }, 1000);
@@ -288,6 +299,7 @@
     let startBatch = false; //操作标志位，防止重复提交
     let currentID = null;
     let batch_settings = {};
+    let update_groups = false;
 
     function toggleAll(source) { //全选
         const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]');
@@ -310,6 +322,10 @@
         const inputValue = document.getElementById('addInput').value;
         if (inputValue.trim()) {
             batch_settings[currentID] = inputValue; //保存数据
+        }
+        else
+        {
+            delete batch_settings[currentID]; //数据置空
         }
         //隐藏添加界面
         const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
@@ -398,6 +414,7 @@
             if (batch_value == null) {
                 return;
             }
+            update_groups = true; //需要刷新group列表
         }
         setBatch(batch_type, batch_value, inputs); //开始批量操作
         startBatch = true; //设置标志位
