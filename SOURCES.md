@@ -84,3 +84,35 @@ Pcloud云盘
 <自定义显示的名称>: {"type": "ehentai", config: {"proxy": "", "exhentai": true,
           "cookies": {"igneous": <cookies值>, "ipb_member_id": <cookies值>, "ipb_pass_hash": <cookies值>}}}
 ```
+
+## pornhunter
+
+Hunter类图片站，例如：
+* https://www.joymiihub.com/
+* https://www.ftvhunter.com/
+* https://www.femjoyhunter.com/
+* https://www.elitebabes.com/
+* https://www.metarthunter.com/
+* https://pmatehunter.com/
+* https://www.xarthunter.com
+
+```
+<自定义显示的名称>: {"type": "pornhunter", config: {"proxy": ""}}
+```
+
+## webdav
+
+WEBDAV文件
+
+需要用户名登陆：
+
+```
+<自定义显示的名称>: {"type": "webdav", "config": {"username": <用户名>, "passwd": <密码>,
+        "proxy": <代理链接>, "url": <webdav链接>}}
+```
+
+无需登陆：
+
+```
+<自定义显示的名称>: {"type": "webdav", "config": {"proxy": <代理链接>, "url": <webdav链接>}}
+```

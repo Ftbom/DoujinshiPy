@@ -26,5 +26,9 @@
     "pornhunter": {
         "web": true,
         "description": "欧美色图"
+    },
+    "webdav": {
+        "web": false,
+        "description": "WEBDAV文件"
     }
 }
