@@ -116,3 +116,13 @@ WEBDAV文件
 ```
 <自定义显示的名称>: {"type": "webdav", "config": {"proxy": <代理链接>, "url": <webdav链接>}}
 ```
+
+## urlcollection
+
+WEB图片集合
+
+```
+<自定义显示的名称>: {"type": "urlcollection", "config": {}}
+```
+
+添加新项的格式：`<集合名称>#<图片链接(以$分隔)>`
