@@ -24,27 +24,19 @@ class Source:
         id_splited = id.split("#")
         title = id_splited[0]
         urls = id_splited[1].strip("$")
-        cursor.execute("SELECT title FROM collection WHERE title LIKE ?", (title + "%",))
-        results = cursor.fetchall()
-        index = 0
-        for result in results:
-            try:
-                remain = result[0].removeprefix(title)
-                if remain == "":
-                    index = 1
-                else:
-                    index_ = int(remain)
-                    if index_ >= index:
-                        index = index_ + 1
-            except:
-                pass
-        if index > 0:
-            title = f"{title} {index}"
-        cursor.execute("INSERT INTO collection (title, urls) VALUES (?, ?)", (title, urls))
+        urls = urls.split("$")
+        cursor.execute("SELECT urls FROM collection WHERE title = ?", (title,))
+        result = cursor.fetchone()
+        if result:
+            r_urls = result[0].split("$")
+            r_urls.extend(urls)
+            urls = r_urls
+            cursor.execute("UPDATE collection SET urls = ? WHERE title = ?", ("$".join(urls), title,))
+        else:
+            cursor.execute("INSERT INTO collection (title, urls) VALUES (?, ?)", (title, "$".join(urls),))
         connection.commit()
         cursor.close()
         connection.close()
-        urls = urls.split("$")
         return {"id": title + "#", "title": title, "pagecount": len(urls), "tags": [],
                 "cover": {"url": urls[0], "headers": {}}}
 

@@ -12,8 +12,8 @@ async function getGroups() {
     return JSON.parse(await res.text()).data;
 }
 
-let count = 1;
 async function getProgress(url) {
+    let count = 1;
     if (rm_group) {
         return rm_group_progress;
     }
@@ -23,10 +23,15 @@ async function getProgress(url) {
         return [result.msg];
     }
     if ((result.msg == "none") || (result.msg == "finished")) {
+        count = sessionStorage.getItem("count");
+        if (count == "NaN") {
+            count = 1;
+        }
         return [count, count];
     }
     const result_strs = result.msg.split("/");
     count = parseInt(result_strs[1]);
+    sessionStorage.setItem("count", count);
     return [parseInt(result_strs[0].split(" ").slice(-1)), count];
 }
 
