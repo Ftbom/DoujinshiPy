@@ -40,6 +40,7 @@ body {
     border-radius: 15px;
     font-size: 12px;
     margin: 2px;
+    cursor: pointer;
 }
 
 .group-badge {
@@ -50,6 +51,18 @@ body {
     border-radius: 15px;
     font-size: 12px;
     margin: 2px;
+    cursor: pointer;
+}
+
+.source-badge {
+    display: inline-block;
+    background-color: #fbecea;
+    color: #ff7b72;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    margin: 2px;
+    cursor: pointer;
 }
 
 .table-container {
@@ -79,6 +92,7 @@ td {
 }
 
 .tag-badge-wrapper,
+.source-badge-wrapper,
 .group-badge-wrapper {
     max-height: 100px;
     /* 设置最大高度 */
@@ -86,6 +100,7 @@ td {
     /* 超过最大高度时垂直滚动 */
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-start;
     gap: 5px;
 }
 
@@ -151,4 +166,255 @@ td {
     border: 1px solid #ccc;
     border-radius: 4px;
     resize: vertical;
+}
+
+.comic-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: flex-start;  /* 默认左对齐 */
+}
+
+.comic-item {
+    position: relative;
+    height: 300px;
+    width: 210px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.comic-cover {
+    height: 280px;
+    width: 210px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.comic-item img {
+    width: 100%;
+    max-width: 210px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.comic-item .title {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #1c1d1e;
+    cursor: pointer;
+}
+
+.comic-item .info-popup {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
+    max-height: 250px;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    text-align: left;
+    z-index: 10;
+    overflow-y: auto;
+}
+
+.comic-item:hover .info-popup {
+    display: block;
+}
+
+.info-popup .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.info-popup hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 5px 0; /* 调整上下间距 */
+}
+
+.info-popup .info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-popup .info-label {
+    display: flex;
+    align-items: center;  /* 垂直居中 */
+    font-weight: bold;
+    color: #333;
+    min-width: 50px;
+}
+
+.info-popup .info-text {
+    display: flex;
+    align-items: center;  /* 垂直居中 */
+    font-style: italic;
+    color: #3d3b3b;
+    min-width: 50px;
+}
+
+.info-popup .info-value {
+    color: #007bff;
+    cursor: pointer;
+}
+
+.info-popup .info-value:hover {
+    text-decoration: underline;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.justify-content-between {
+    justify-content: space-between;
+}
+
+.mb-3 {
+    margin-bottom: 1rem;
+}
+
+.form-select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.w-25 {
+    width: 25%;
+}
+
+.ms-2 {
+    margin-left: 0.5rem;
+}
+
+.w-50 {
+    width: 50%;
+}
+
+.form-control {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.btn {
+    padding: 8px 16px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.bi-search {
+    font-size: 16px;
+}
+
+.pagination-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.reader-container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.reader-header {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.comic-image {
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.footer-controls {
+    margin-top: 20px;
+    padding: 15px 0;
+    display: flex;
+    justify-content: center; /* 居中布局 */
+}
+
+.page-selector {
+    flex-grow: 0; /* 禁止拉伸 */
+    margin: 0 15px; /* 增加左右间距 */
+}
+
+.page-selector select {
+    min-width: 150px;
+    height: 38px;
+}
+
+.image-wrapper {
+    position: relative;
+}
+
+.nav-left, .nav-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    cursor: pointer;
+}
+
+.nav-left {
+    left: 0;
+}
+
+.nav-right {
+    right: 0;
+}
+
+@media (max-width: 767px) {
+    .comic-container {
+        justify-content: center;  /* 手机端居中 */
+        gap: 15px;  /* 适当缩小间距 */
+    }
+    .form-select, .form-control {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+    .btn {
+        padding: 6px 12px;
+    }
+    .reader-header {
+        font-size: 20px;
+        padding: 8px;
+    }
+    .footer-controls .d-flex {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+    .page-selector select {
+        min-width: 120px;
+        max-width: 200px;
+    }
 }

@@ -12,6 +12,10 @@ def get_metadata(client, id: str) -> dict:
     tags = [item for item in tags if item != ""]
     if "translated_tags" in doujinshi:
         translated_tags = doujinshi["translated_tags"].split("|")
+        try:
+            translated_tags.remove("")
+        except:
+            pass
     else:
         translated_tags = None
     # 获取group

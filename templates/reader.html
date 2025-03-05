@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}
+阅读
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block main %}
+<div class="reader-container">
+    <div class="reader-header">
+    {% if title %}
+        {{ title }}
+    {% else %}
+        Doujinshi不存在！
+    {% endif %}
+    </div>
+    {% if title %}
+    <div class="image-wrapper" id="comic-pages">
+        <div class="nav-left" onclick="prevPage()"></div>
+        <div class="nav-right" onclick="nextPage()"></div>
+    </div>
+    <div class="footer-controls">
+        <div class="d-flex gap-3 align-items-center">
+            <button class="btn btn-primary" onclick="prevPage()">上一页</button>
+            <div class="page-selector">
+                <select class="form-select" id="pageJump" style="min-width: 80px;" onchange="loadSelectedPage()">
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="nextPage()">下一页</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if title %}
+<script>
+    async function loadImage(num) {
+        if (num in loading) {
+            return;
+        }
+        if (num >= images.length) {
+            return;
+        }
+        loading.push(num);
+        const imgElement = document.getElementById(`page_${num}`);
+        const blob = await getImg(images[num]);
+        const imgURL = URL.createObjectURL(blob);
+        imgElement.src = imgURL;
+        const display = imgElement.style.display;
+        imgElement.style = `display:${display};`;
+    }
+    async function PreloadImages(num) {
+        loadImage(num);
+        loadImage(num + 1);
+        loadImage(num + 2);
+    }
+    function loadPage(selectedPage) {
+        PreloadImages(selectedPage);
+        document.getElementById("pageJump").value = selectedPage + 1;
+        document.getElementById(`page_${currentPage}`).style.display = "none";
+        currentPage = selectedPage;
+        document.getElementById(`page_${currentPage}`).style.display = "block";
+    }
+    function loadSelectedPage() {
+        const selectElement = document.getElementById("pageJump");
+        const selectedPage = selectElement.selectedIndex;
+        loadPage(selectedPage);
+    }
+    function prevPage() {
+        if (currentPage > 0) {
+            loadPage(currentPage - 1);
+        }
+    }
+    function nextPage() {
+        if (currentPage < (images.length - 1)) {
+            loadPage(currentPage + 1);
+        }
+    }
+</script>
+<script>
+    const loading = []
+    var images = null;
+    var currentPage = 0;
+    //初始化
+    $(document).ready(async function () {
+        const id = window.location.href.split("/").slice(-1)[0];
+        images = await getPages(id);
+        let html = "";
+        let html2 = "";
+        for (let i = 0; i < images.length; i++) {
+            html += `<option>${i + 1}</option>`;
+            html2 += `<img id="page_${i}" style="display:none;height:40px;width:40px;" src="{{ url_for('static', filename='loading.gif') }}" class="comic-image">`;
+        }
+        document.getElementById("pageJump").innerHTML = html;
+        document.getElementById("comic-pages").innerHTML += html2;
+        document.getElementById("page_0").style = "height:40px;width:40px;";
+        loadPage(0);
+    });
+</script>
+{% endif %}
+{% endblock %}

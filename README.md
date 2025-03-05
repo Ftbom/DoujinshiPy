@@ -28,8 +28,8 @@ python app.py
 
 * API参考
   >`http://127.0.0.1:9000/docs`或`http://127.0.0.1:9000/redoc`
-* doujinshi管理后台
-  >`http://127.0.0.1:9000/admin`
+* 简单WEB界面
+  >`http://127.0.0.1:9000/web`
 * [tachiyomi插件](https://github.com/Ftbom/tachiyomi_doujinshione_code)
 
 ## 功能说明

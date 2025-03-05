@@ -33,6 +33,10 @@ def verify_token(token: str):
             headers = {"WWW-Authenticate": "Bearer"},
         )
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("static/favicon.ico")
+
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
     verify_token(token)

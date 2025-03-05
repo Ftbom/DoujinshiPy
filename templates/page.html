@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}
+列表
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block main %}
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <select id="sort" class="form-select">
+            <option value="0" selected>正序</option>
+            <option value="1">倒序</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <select id="source" class="form-select">
+            <option value="" selected>所有源</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <select id="group" class="form-select">
+            <option value="" selected>所有分组</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-3">
+        <div class="input-group">
+            <input type="text" id="search" class="form-control" placeholder="搜索">
+            <button class="btn btn-primary" onclick="search()">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<div id="comic-list" class="comic-container">
+</div>
+<div class="pagination-buttons">
+    <button class="btn btn-primary" onclick="prevPage()">上一页</button>
+    <input type="number" id="page-input" class="form-control ms-2" style="width: 80px;" placeholder="页码">
+    <button class="btn btn-primary" onclick="loadDatas()">跳转</button>
+    <button class="btn btn-primary" onclick="nextPage()">下一页</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    //初始化
+    $(document).ready(async function () {
+        const info = await getServerInfo();
+        //源筛选
+        let selectElement = "";
+        for (let source in info.sources) {
+            // 添加新选项
+            selectElement += `<option value="${source}">${source}</option>`;
+        }
+        document.getElementById("source").innerHTML += selectElement;
+        groups = await getGroups();
+        //组筛选 
+        selectElement = "";
+        for (let group of groups) {
+            // 添加新选项
+            selectElement += `<option id="name_${group.name}" value="${group.id}">${group.name}</option>`;
+        }
+        document.getElementById("group").innerHTML += selectElement;
+        document.getElementById("page-input")
+        loadDatas(true);
+    });
+
+    async function loadCovers() {
+        const covers = document.getElementsByClassName("comic-cover");
+        for (let cover of covers) {
+            const img = cover.getElementsByTagName("img")[0];
+            const blob = await getImg(`/doujinshi/${img.id}/thumbnail`);
+            const imgURL = URL.createObjectURL(blob);
+            img.removeAttribute("style");
+            img.src = imgURL;
+        }
+    }
+</script>
+<script>
+    function finishTagsHtml(ihtml, name) {
+        let html = "";
+        if (ihtml.length > 0) {
+            html = `<div class="info-row">
+                <span class="info-text">${name}：</span>
+                <div class="tag-badge-wrapper">
+                    ${ihtml}
+                </div>
+            </div>`;
+        }
+        return html;
+    }
+    function getTagsHtml(tags) {
+        let html = "";
+        let language = "";
+        let group = "";
+        let artist = "";
+        let parody = "";
+        let character = "";
+        let female = "";
+        let male = "";
+        let other = "";
+        let cosplayer = "";
+        let mixed = "";
+        let category = "";
+        for (let tag of tags) {
+            let tag_html = null;
+            const tag_names = tag.split(":");
+            if (tag_names.length == 1) {
+                tag_html = `<span class="tag-badge" onclick="filter_tag('${tag}')">${tag_names[0]}</span>`
+            } else {
+                tag_html = `<span class="tag-badge" onclick="filter_tag('${tag}')">${tag_names[1]}</span>`
+            }
+            if (tag.search("language:") != -1) {
+                language += tag_html;
+            } else if (tag.search("group:") != -1) {
+                group += tag_html;
+            } else if (tag.search("artist:") != -1) {
+                artist += tag_html;
+            } else if (tag.search("parody:") != -1) {
+                parody += tag_html;
+            } else if (tag.search("character:") != -1) {
+                character += tag_html;
+            } else if (tag.search("female:") != -1) {
+                female += tag_html;
+            } else if (tag.search("male:") != -1) {
+                male += tag_html;
+            } else if (tag.search("cosplayer:") != -1) {
+                cosplayer += tag_html;
+            } else if (tag.search("mixed:") != -1) {
+                mixed += tag_html;
+            } else if (tag.search("category:") != -1) {
+                category += tag_html;
+            } else {
+                other += tag_html;
+            }
+        }
+        html += finishTagsHtml(category, "类别");
+        html += finishTagsHtml(language, "语言");
+        html += finishTagsHtml(artist, "艺术家");
+        html += finishTagsHtml(cosplayer, "Coser");
+        html += finishTagsHtml(group, "团队");
+        html += finishTagsHtml(parody, "原作");
+        html += finishTagsHtml(character, "角色");
+        html += finishTagsHtml(female, "女性");
+        html += finishTagsHtml(male, "男性");
+        html += finishTagsHtml(mixed, "混合");
+        html += finishTagsHtml(other, "其他");
+        return html;
+    }
+    async function loadDatas(random) {
+        let doujinshiDatas = null;
+        if (random) {
+            //随机
+            doujinshiDatas = await getRandomDatas(5);
+        } else {
+            // 获取当前查询信息
+            const search_group = document.getElementById("group").value;
+            const search_source = document.getElementById("source").value;
+            const search_sort = parseInt(document.getElementById("sort").value);
+            const search_page = parseInt(document.getElementById("page-input").value);
+            const search_query = document.getElementById("search").value;
+            doujinshiDatas = await getDatas(search_query, search_group, search_source, search_page, search_sort); //获取数据
+        }
+        let html = "";
+        for (let data of doujinshiDatas) {
+            //生成tag字符串
+            var tags_element = "";
+            if ("translated_tags" in data) {
+                tags_element = getTagsHtml(data.translated_tags);
+            } else {
+                tags_element = getTagsHtml(data.tags);
+            }
+            //生成group字符串
+            var groups_element = "";
+            for (let group of data.groups) {
+                groups_element += `<span class="group-badge" onclick="filter_group('${group}')">${group}</span>`;
+            }
+            var source_element = `<span class="source-badge" onclick="filter_source('${data.source}')">${data.source}</span>`;
+            html += `<div class="comic-item">
+        <div class="comic-cover">
+        <img id="${data.id}" style="height:40px;width:40px;" src="{{ url_for('static', filename='loading.gif') }}" alt="${data.title}">
+        </div>
+        <div class="title" onclick="read('${data.id}')">${data.title}</div>
+        <div class="info-popup">
+            <div class="info-row">
+                <span class="info-label">源:</span>
+                <div class="source-badge-wrapper">
+                    ${source_element}
+                </div>
+            </div>
+            <hr>
+            <div class="info-row">
+                <span class="info-label">分组:</span>
+                <div class="group-badge-wrapper">
+                    ${groups_element}
+                </div>
+            </div>
+            <hr>
+            <div class="info-row">
+                <span class="info-label">Tags:</span>
+            </div>
+            ${tags_element}
+        </div>
+    </div>`;
+        }
+        document.getElementById("comic-list").innerHTML = html;
+        loadCovers();
+    }
+</script>
+<script>
+    function search() {
+        document.getElementById("page-input").value = 1;
+        loadDatas();
+    }
+    function filter_tag(tag) {
+        document.getElementById("source").value = "";
+        document.getElementById("group").value = "";
+        document.getElementById("search").value = tag;
+        document.getElementById("page-input").value = 1;
+        loadDatas();
+    }
+    function filter_group(group) {
+        document.getElementById("source").value = "";
+        document.getElementById("search").value = "";
+        document.getElementById("group").value = document.getElementById("name_" + group).value;
+        document.getElementById("page-input").value = 1;
+        loadDatas();
+    }
+    function filter_source(source) {
+        document.getElementById("group").value = "";
+        document.getElementById("source").value = source;
+        document.getElementById("search").value = "";
+        document.getElementById("page-input").value = 1;
+        loadDatas();
+    }
+    function prevPage() {
+        const cur_page = parseInt(document.getElementById("page-input").value);
+        if (cur_page > 1) {
+            document.getElementById("page-input").value = cur_page - 1;
+            loadDatas();
+        }
+    }
+    function nextPage() {
+        const cur_page = parseInt(document.getElementById("page-input").value);
+        document.getElementById("page-input").value = cur_page + 1;
+        loadDatas();
+    }
+    function read(id) {
+        window.open("{{ url_for('read', id='') }}" + id, '_blank')
+    }
+</script>
+{% endblock %}

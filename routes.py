@@ -20,8 +20,19 @@ def login_required(f):
 @flask_app.route('/')
 @flask_app.route('/<path:path>')
 @login_required
-def redirect_to_batch(path=None):
-    return redirect(url_for("batch"))
+def redirect_to_batch(path = None):
+    return redirect(url_for("page"))
+
+@flask_app.route("/page")
+@login_required
+def page():
+    return render_template("page.html")
+
+@flask_app.route("/read/<path:id>")
+@login_required
+def read(id):
+    title = app_state["redis_client"].hget(f"doujinshi:{id}", "title")
+    return render_template("reader.html", title = title)
 
 @flask_app.route("/batch")
 @login_required

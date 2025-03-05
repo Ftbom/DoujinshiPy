@@ -3,6 +3,7 @@ import time
 import uuid
 import json
 import shutil
+import logging
 import requests
 import importlib
 import threading
@@ -116,6 +117,7 @@ def save_modified_to_sqlite(client) -> None:
                 _id = _id[10 :]
                 save_doujinshi(session, client, _id)
         session.commit()
+        logging.info("save changes to sqlite")
 
 def mark_modified(client, id: str, group: bool = False) -> None:
     with client.lock("modified_lock", blocking = True, blocking_timeout = 10):

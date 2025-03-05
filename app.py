@@ -10,5 +10,5 @@ from routes import *
 
 if __name__ == '__main__':
     app_init(app_state) # init
-    app.mount("/admin", WSGIMiddleware(flask_app))
+    app.mount("/web", WSGIMiddleware(flask_app))
     uvicorn.run(app = app, host = app_state["settings"]["host"], port = app_state["settings"]["port"])

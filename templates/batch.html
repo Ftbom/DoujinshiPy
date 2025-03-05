@@ -13,21 +13,31 @@
 {% endblock %}
 
 {% block main %}
-<div class="d-flex justify-content-between mb-3">
-    <select id="sort" class="form-select w-25">
-        <option value="0" selected>正序</option>
-        <option value="1">倒序</option>
-    </select>
-    <select id="source" class="form-select w-25 ms-2">
-        <option value="" selected>所有源</option>
-    </select>
-    <select id="group" class="form-select w-25 ms-2">
-        <option value="" selected>所有分组</option>
-    </select>
-    <input type="text" id="search" class="form-control w-50 ms-2" placeholder="搜索">
-    <button class="btn btn-primary ms-2" onclick="search()">
-        <i class="bi bi-search"></i>
-    </button>
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <select id="sort" class="form-select">
+            <option value="0" selected>正序</option>
+            <option value="1">倒序</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <select id="source" class="form-select">
+            <option value="" selected>所有源</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <select id="group" class="form-select">
+            <option value="" selected>所有分组</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-3">
+        <div class="input-group">
+            <input type="text" id="search" class="form-control" placeholder="搜索">
+            <button class="btn btn-primary" onclick="search()">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </div>
 </div>
 <div class="table-container">
     <table class="table table-bordered" data-index="1" id="sortableTable" data-toggle="table" data-unique-id="id" data-sortable="true">
@@ -41,7 +51,7 @@
                 <th data-field="group" data-sortable="true">分组</th>
                 <th data-field="source" data-sortable="true">源</th>
                 <th data-field="cover" data-sortable="true">封面</th>
-                <th style="min-width:121px" data-field="actions">操作</th>
+                <th style="min-width:170px" data-field="actions">操作</th>
             </tr>
         </thead>
         <tbody>
@@ -51,25 +61,26 @@
 <div style="display: flex; justify-content: center;">
     <button id="load-more" class="btn btn-primary mt-3" onclick="loadMoreData()" style="width: 200px;">加载更多</button>
 </div>
-<div id="progress" style="display: none;margin-top: 10px;">
+<div id="progress" style="margin-top: 10px;">
     <p id="progress-text" class="progress-text"></p>
-    <div class="progress">
-        <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0"
-            aria-valuemin="0" aria-valuemax="100">0%</div>
+</div>
+<div class="row g-2 mt-4">
+    <div class="col-12 col-md-4">
+        <select id="batch_type" class="form-select">
+            <option value="group" selected>添加到分组</option>
+            <option value="group_rm" selected>从分组删除</option>
+            <option value="tag">获取Tag</option>
+            <option value="cover">获取封面</option>
+        </select>
     </div>
-</div>
-<div class="dropdown-group mt-4">
-    <select id="batch_type" class="form-select">
-        <option value="group" selected>添加到分组</option>
-        <option value="group_rm" selected>从分组删除</option>
-        <option value="tag">获取Tag</option>
-        <option value="cover">获取封面</option>
-    </select>
-    <select id="batch_value" class="form-select">
-        <option value="new">+新分组</option>
-    </select>
-    <button class="btn btn-success" onclick="handleStart()">开始</button>
-</div>
+    <div class="col-12 col-md-4">
+        <select id="batch_value" class="form-select">
+            <option value="new">+新分组</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-4">
+        <button class="btn btn-success w-100" onclick="handleStart()">开始</button>
+    </div>
 </div>
 
 <!-- 添加界面 -->
@@ -197,37 +208,24 @@
         table_headers[4].style = "min-width:180px";
         table_headers[5].style = "min-width:180px";
         table_headers[6].style = "width:70px";
-        table_headers[7].style = "width:121px";
+        table_headers[7].style = "width:170px";
     });
 </script>
 <script>
-    let progress = 0; //进度记录
-    let progressBar = document.getElementById('progress-bar');
     let progressText = document.getElementById('progress-text');
-    let progressContainer = document.getElementById('progress');
 
     function handleProgress(url) {
-        if (progress >= 100) {
-            progress = 0;
-        }
-        // 显示进度条
-        progressContainer.style.display = "block";
         // 每秒查询进度
         let interval = setInterval(async function () {
             let result = await getProgress(url); //查询进度信息
             //更新进度信息
-            progress = result[0] / result[1] * 100;
-            progress = progress.toFixed(2);
-            progressBar.style.width = progress + '%';
-            progressBar.setAttribute('aria-valuenow', progress);
-            progressBar.innerText = progress + '%';
-            progressText.innerText = "进度：" + result[0] + "/" + result[1];
-            if (progress >= 100) {
+            progressText.innerText = result[1];
+            if (result[0]) {
                 clearInterval(interval); // 达到100%时停止更新
                 startBatch = false; //清空操作标志位
                 setTimeout(() => {
                     if (update_groups) {
-                        window.location.href = '/admin/batch'; //刷新界面
+                        window.location.href = "{{ url_for('batch') }}"; //刷新界面
                     }
                     else {
                         search();

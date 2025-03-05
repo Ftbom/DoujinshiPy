@@ -7,32 +7,47 @@ async function getServerInfo() {
     return JSON.parse(await res.text());
 }
 
+async function getImg(url) {
+    const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+    const blob = await res.blob();
+    return blob;
+}
+
 async function getGroups() {
     const res = await fetch("/group", { headers: { Authorization: "Bearer " + token } });
     return JSON.parse(await res.text()).data;
 }
 
 async function getProgress(url) {
-    let count = 1;
     if (rm_group) {
-        return rm_group_progress;
+        return [(rm_group_progress[0] == rm_group_progress[1]), `removing groups ${rm_group_progress[0]}/${rm_group_progress[1]}`];
     }
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     let result = JSON.parse(await res.text());
-    if (url.search("scan") != -1) {
-        return [result.msg];
+    let finished = false;
+    if ((result.msg == "none") || (result.msg == "finished") || (result.msg == "scanning has not started")) {
+        finished = true;
     }
-    if ((result.msg == "none") || (result.msg == "finished")) {
-        count = sessionStorage.getItem("count");
-        if (count == "NaN") {
-            count = 1;
+    return [finished, result.msg];
+}
+
+function parseDatas(datas) {
+    const results = [];
+    for (let data of datas) {
+        let result = {
+            id: data.id,
+            title: data.title,
+            hascover: data.cover != "/doujinshi/nothumb/thumbnail",
+            tags: data.tags,
+            groups: data.groups,
+            source: data.source
+        };
+        if ("translated_tags" in data) {
+            result["translated_tags"] = data.translated_tags;
         }
-        return [count, count];
+        results.push(result);
     }
-    const result_strs = result.msg.split("/");
-    count = parseInt(result_strs[1]);
-    sessionStorage.setItem("count", count);
-    return [parseInt(result_strs[0].split(" ").slice(-1)), count];
+    return results;
 }
 
 async function getDatas(query, group, source, page, reverse) {
@@ -41,18 +56,13 @@ async function getDatas(query, group, source, page, reverse) {
     }
     const url = `/search?query=${query}&group=${group}&source_name=${source}&page=${page}`;
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
-    const datas = [];
-    for (let data of JSON.parse(await res.text()).data) {
-        datas.push({
-            id: data.id,
-            title: data.title,
-            hascover: data.cover != "/doujinshi/nothumb/thumbnail",
-            tags: data.tags,
-            groups: data.groups,
-            source: data.source
-        })
-    }
-    return datas;
+    return parseDatas(JSON.parse(await res.text()).data)
+}
+
+async function getRandomDatas(num) {
+    const url = `/doujinshi/random?num=${num}`;
+    const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+    return parseDatas(JSON.parse(await res.text()).data)
 }
 
 async function setBatch(type, value, datas) {
@@ -175,4 +185,19 @@ function updateSettings(proxy_img, num) {
             max_num_perpage: num
         })
     });
+}
+
+async function getPages(id) {
+    const res = await fetch(`/doujinshi/${id}/pages`, { headers: { Authorization: "Bearer " + token } });
+    let result = JSON.parse(await res.text());
+    if ("urls" in result.data) {
+        const urls = [];
+        for (let i = 0; i < result.data.urls.length; i++) {
+            urls.push(`/doujinshi/${id}/page/${i}`);
+        }
+        return urls;
+    }
+    else {
+        return result.data;
+    }
 }
