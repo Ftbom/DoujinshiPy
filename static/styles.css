@@ -172,15 +172,16 @@ td {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
-    justify-content: flex-start;  /* 默认左对齐 */
+    justify-content: center;
 }
 
 .comic-item {
     position: relative;
-    height: 300px;
-    width: 210px;
+    height: 350px;
+    width: 220px;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    margin-top: 10px;
 }
 
 .comic-cover {
@@ -195,13 +196,14 @@ td {
     width: 100%;
     max-width: 210px;
     height: auto;
+    max-height: 280px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .comic-item .title {
     margin-top: 10px;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     color: #1c1d1e;
     cursor: pointer;
@@ -210,10 +212,10 @@ td {
 .comic-item .info-popup {
     display: none;
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 40%;
+    left: 48%;
     transform: translate(-50%, -50%);
-    width: 350px;
+    width: 200px;
     max-height: 250px;
     background-color: white;
     border: 1px solid #ccc;
@@ -223,6 +225,13 @@ td {
     text-align: left;
     z-index: 10;
     overflow-y: auto;
+}
+
+.badge-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 5px;
 }
 
 .comic-item:hover .info-popup {
@@ -235,10 +244,16 @@ td {
     margin-bottom: 5px;
 }
 
-.info-popup hr {
+.info-hr {
+    border: none;
+    border-top: 3px solid #ccc;
+    margin: 5px 0; /* 调整上下间距 */
+}
+
+.tag-hr {
     border: none;
     border-top: 1px solid #ccc;
-    margin: 5px 0; /* 调整上下间距 */
+    margin: 2px 0; /* 调整上下间距 */
 }
 
 .info-popup .info-row:last-child {
@@ -393,10 +408,6 @@ td {
 }
 
 @media (max-width: 767px) {
-    .comic-container {
-        justify-content: center;  /* 手机端居中 */
-        gap: 15px;  /* 适当缩小间距 */
-    }
     .form-select, .form-control {
         font-size: 14px;
         padding: 6px 12px;

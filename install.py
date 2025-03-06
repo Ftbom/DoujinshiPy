@@ -22,7 +22,7 @@ with open(".data/config.json", "w", encoding = "utf-8") as f:
             "proxy": "",
             "proxy_webpage": False,
             "passwd": "demo",
-            "max_num_perpage": 15, # 每页最大doujinshi数
+            "max_num_perpage": 12, # 每页最大doujinshi数
             "max_cache_size": 2048, # 2GB
             "cache_expire": 30, # 天
             "tag_translate": False # 是否对tag进行翻译（针对other:xxx,female:xxx格式）

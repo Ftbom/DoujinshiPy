@@ -197,7 +197,12 @@ async function getPages(id) {
         }
         return urls;
     }
-    else {
-        return result.data;
+    if (result.data[0].search("/pageinfo/") != -1) {
+        const urls = [];
+        for (let i = 0; i < result.data.length; i++) {
+            urls.push(`/doujinshi/${id}/page/${i}`);
+        }
+        return urls;
     }
+    return result.data;
 }

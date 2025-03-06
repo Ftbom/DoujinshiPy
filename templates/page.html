@@ -86,10 +86,10 @@
         if (ihtml.length > 0) {
             html = `<div class="info-row">
                 <span class="info-text">${name}：</span>
-                <div class="tag-badge-wrapper">
+                <div class="badge-wrapper">
                     ${ihtml}
                 </div>
-            </div>`;
+            </div><hr class="tag-hr">`;
         }
         return html;
     }
@@ -155,7 +155,7 @@
         let doujinshiDatas = null;
         if (random) {
             //随机
-            doujinshiDatas = await getRandomDatas(5);
+            doujinshiDatas = await getRandomDatas(4);
         } else {
             // 获取当前查询信息
             const search_group = document.getElementById("group").value;
@@ -188,21 +188,22 @@
         <div class="info-popup">
             <div class="info-row">
                 <span class="info-label">源:</span>
-                <div class="source-badge-wrapper">
+                <div class="badge-wrapper">
                     ${source_element}
                 </div>
             </div>
-            <hr>
+            <hr class="info-hr">
             <div class="info-row">
                 <span class="info-label">分组:</span>
-                <div class="group-badge-wrapper">
+                <div class="badge-wrapper">
                     ${groups_element}
                 </div>
             </div>
-            <hr>
+            <hr class="info-hr">
             <div class="info-row">
                 <span class="info-label">Tags:</span>
             </div>
+            <hr class="tag-hr">
             ${tags_element}
         </div>
     </div>`;
