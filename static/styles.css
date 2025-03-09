@@ -348,9 +348,9 @@ td {
 }
 
 .reader-container {
-    max-width: 1000px;
+    /* max-width: 1000px; */
     margin: 20px auto;
-    padding: 0 15px;
+    /* padding: 0 15px; */
 }
 
 .reader-header {
