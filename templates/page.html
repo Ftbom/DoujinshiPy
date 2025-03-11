@@ -27,12 +27,13 @@
         </select>
     </div>
     <div class="col-12 col-md-3">
-        <div class="input-group">
-            <input type="text" id="search" class="form-control" placeholder="搜索">
+        <div class="input-group position-relative">
+            <input type="text" id="search" class="form-control" placeholder="搜索" onkeydown="handleSuggestions(event)">
             <button class="btn btn-primary" onclick="search()">
                 <i class="bi bi-search"></i>
             </button>
         </div>
+        <div id="suggestions" class="list-group position-absolute mt-1" style="z-index: 1000; width: 200px;"></div>
     </div>
 </div>
 <div id="comic-list" class="comic-container">
@@ -46,6 +47,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='ehtag.js') }}"></script>
 <script>
     //初始化
     $(document).ready(async function () {
@@ -65,7 +67,7 @@
             selectElement += `<option id="name_${group.name}" value="${group.id}">${group.name}</option>`;
         }
         document.getElementById("group").innerHTML += selectElement;
-        document.getElementById("page-input")
+        document.getElementById("page-input");
         loadDatas(true);
     });
 
@@ -214,6 +216,7 @@
 </script>
 <script>
     function search() {
+        document.getElementById("suggestions").innerHTML = "";
         document.getElementById("page-input").value = 1;
         loadDatas();
     }

@@ -407,6 +407,18 @@ td {
     right: 0;
 }
 
+#suggestions {
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: normal; /* 允许内容换行 */
+    z-index: 1000;
+}
+
+.list-group-item {
+    word-wrap: break-word; /* 允许长单词换行 */
+    word-break: break-word; /* 允许长单词换行 */
+}
+
 @media (max-width: 767px) {
     .form-select, .form-control {
         font-size: 14px;

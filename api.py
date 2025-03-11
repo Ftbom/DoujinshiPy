@@ -45,6 +45,24 @@ def get_status(token: str = Depends(oauth2)) -> dict:
                 "sources": get_sources(), # 可用源及“插件”
                 "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
 
+@app.get("/ehtags")
+def ehtag(token: str = Depends(oauth2)):
+    verify_token(token)
+    version = app_state["settings"]["tag_translate"]
+    if version:
+        return {"version": version, "url": f"/ehtags.{version}.json"}
+    return JSONResponse({"error": "translate tag not enable"}, status_code = 400)
+
+@app.get("/ehtags.{version}.json")
+def ehtag(version: str, token: str = Depends(oauth2)):
+    verify_token(token)
+    if version != app_state["settings"]["tag_translate"]:
+        return JSONResponse({"error": "ehtags in wrong verion"}, status_code = 400)
+    file_path = f".data/tag_database.{version}.json"
+    if not os.path.exists(file_path):
+        return JSONResponse({"error": "ehtags file not find"}, status_code = 404)
+    return FileResponse(file_path)
+
 @app.post("/settings")
 def update_settings(settings: SettingValues, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
