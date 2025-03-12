@@ -172,24 +172,13 @@ const dbManager = {
     }
 };
 
-const searchInput = document.getElementById("search");
-const suggestions = document.getElementById("suggestions");
 let isMouseOverSuggestions = false;
 
-// 监听 suggestions 的鼠标进入和离开
-suggestions.addEventListener("mouseenter", function () {
-    isMouseOverSuggestions = true;
-});
-
-suggestions.addEventListener("mouseleave", function () {
-    isMouseOverSuggestions = false;
-});
-
 // 监听 input 失去焦点
-searchInput.addEventListener("blur", function () {
+document.getElementById("search").addEventListener("blur", function () {
     setTimeout(() => {
         if (!isMouseOverSuggestions) {
-            suggestions.innerHTML = "";
+            document.getElementById("suggestions").innerHTML = "";
         }
     }, 200);
 });
@@ -219,6 +208,7 @@ function showSuggestions(query) {
 }
 
 function selectSuggestion(suggestion) {
+    isMouseOverSuggestions = true;
     const query = document.getElementById("search");
     const arr = query.value.split("$,").map(str => str.trim()).filter(str => str !== "");
     arr.pop();
@@ -226,7 +216,8 @@ function selectSuggestion(suggestion) {
     setTimeout(() => {
         query.value = arr.join("$, ");
         query.focus();
-        document.getElementById("suggestions").innerHTML = "";
+        document.getElementById.getElementById("suggestions").innerHTML = "";
+        isMouseOverSuggestions = false;
     }, 200);
 }
 
