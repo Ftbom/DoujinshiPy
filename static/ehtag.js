@@ -216,7 +216,7 @@ function selectSuggestion(suggestion) {
     setTimeout(() => {
         query.value = arr.join("$, ");
         query.focus();
-        document.getElementById.getElementById("suggestions").innerHTML = "";
+        document.getElementById("suggestions").innerHTML = "";
         isMouseOverSuggestions = false;
     }, 200);
 }
