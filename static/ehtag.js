@@ -51,15 +51,15 @@ const dbManager = {
     trie: new Trie(),
 
     async init() {
-        const db = await this.initDB();
-        const need_loaded = await this.loadEhTag(db);
+        const need_loaded = await this.loadEhTag();
         if (need_loaded) {
+            const db = await this.initDB();
             this.tagstore = await this.loadTrieFromDB(db);
+            db.close();
         }
-        db.close();
     },
 
-    async loadEhTag(db) {
+    async loadEhTag() {
         const version = localStorage.getItem("tagdatabase");
         const token = localStorage.getItem("token");
         const res = await fetch("/ehtags", { headers: { Authorization: "Bearer " + token } });
@@ -70,9 +70,14 @@ const dbManager = {
         if (version == info.version) {
             return true;
         }
+        indexedDB.deleteDatabase('TagDatabase').onsuccess = () => {
+            console.log("delete old db");
+        };
         const file = await fetch(info.url, { headers: { Authorization: "Bearer " + token } });
         const tags = await file.json();
+        const db = await this.initDB();
         await this.addDatas(db, tags);
+        db.close();
         localStorage.setItem("tagdatabase", info.version);
         this.tagstore = true;
         return false;
