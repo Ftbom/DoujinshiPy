@@ -172,6 +172,28 @@ const dbManager = {
     }
 };
 
+const searchInput = document.getElementById("search");
+const suggestions = document.getElementById("suggestions");
+let isMouseOverSuggestions = false;
+
+// 监听 suggestions 的鼠标进入和离开
+suggestions.addEventListener("mouseenter", function () {
+    isMouseOverSuggestions = true;
+});
+
+suggestions.addEventListener("mouseleave", function () {
+    isMouseOverSuggestions = false;
+});
+
+// 监听 input 失去焦点
+searchInput.addEventListener("blur", function () {
+    setTimeout(() => {
+        if (!isMouseOverSuggestions) {
+            suggestions.innerHTML = "";
+        }
+    }, 200);
+});
+
 function handleSuggestions(event) {
     if (event.key === "Enter") {
         event.preventDefault();
@@ -201,8 +223,11 @@ function selectSuggestion(suggestion) {
     const arr = query.value.split("$,").map(str => str.trim()).filter(str => str !== "");
     arr.pop();
     arr.push(suggestion);
-    query.value = arr.join("$, ");
-    document.getElementById("suggestions").innerHTML = "";
+    setTimeout(() => {
+        query.value = arr.join("$, ");
+        query.focus();
+        document.getElementById("suggestions").innerHTML = "";
+    }, 200);
 }
 
 // 初始化数据库和标签存储
