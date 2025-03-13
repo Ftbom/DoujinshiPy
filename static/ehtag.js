@@ -1,100 +1,102 @@
-class TrieNode {
-    constructor() {
-        this.children = {};
-        this.isEndOfWord = false;
-        this.data = new Set();
+class SearchEngine {
+    constructor(n = 2) {
+        this.index = new Map();
+        this.n = n; // N-gram 窗口大小
+    }
+
+    // 添加数据
+    addData(id, value, key) {
+        this._indexData(id, value);
+        this._indexData(id, key);
+    }
+
+    // 构建索引
+    _indexData(id, text) {
+        const grams = this._generateNgrams(text);
+        for (const gram of grams) {
+            if (!this.index.has(gram)) {
+                this.index.set(gram, new Set());
+            }
+            this.index.get(gram).add(id);
+        }
+    }
+
+    // 生成 N-gram
+    _generateNgrams(text) {
+        text = text.toLowerCase();
+        const grams = new Set();
+        for (let i = 0; i <= text.length - this.n; i++) {
+            grams.add(text.substring(i, i + this.n));
+        }
+        return grams;
+    }
+
+    // 模糊查询
+    search(query) {
+        query = query.toLowerCase();
+        const grams = this._generateNgrams(query);
+        let resultSet = new Set();
+
+        for (const gram of grams) {
+            if (this.index.has(gram)) {
+                if (resultSet.size === 0) {
+                    resultSet = new Set(this.index.get(gram));
+                } else {
+                    resultSet = new Set([...resultSet].filter(id => this.index.get(gram).has(id)));
+                }
+            }
+        }
+        return [...resultSet];
     }
 }
 
-class Trie {
-    constructor() {
-        this.root = new TrieNode();
+function needUpdate() {
+    const savedTime = localStorage.getItem("lastupdate");
+    if (!savedTime) {
+        return true; // 没有记录，默认认为已过期
     }
-    insert(key, data) {
-        let node = this.root;
-        for (let char of key) {
-            if (!node.children[char]) {
-                node.children[char] = new TrieNode();
-            }
-            node = node.children[char];
-        }
-        node.isEndOfWord = true;
-        // 添加数据
-        node.data.add(data);
-    }
-    search(prefix) {
-        let node = this.root;
-        for (let char of prefix) {
-            if (!node.children[char]) {
-                return [];
-            }
-            node = node.children[char];
-        }
-        return this.collectAllWords(node);
-    }
-    collectAllWords(node) {
-        let results = [];
-        if (node.isEndOfWord) {
-            results.push(...node.data);
-        }
-        for (let child in node.children) {
-            results.push(...this.collectAllWords(node.children[child]));
-        }
-        return new Set(results);
-    }
+    const savedDate = new Date(parseInt(savedTime, 10)); // 转换为日期对象
+    const now = new Date();
+    // 计算 savedDate + 1 个月的日期
+    const oneMonthLater = new Date(savedDate);
+    oneMonthLater.setMonth(savedDate.getMonth() + 1);
+    return now >= oneMonthLater; // 如果当前时间大于等于 oneMonthLater，则超过 1 个月
 }
 
 const dbManager = {
     db: null,
     tagstore: false,
-    ver: null,
-    trie: new Trie(),
+    engine: new SearchEngine(),
 
     async init() {
         const need_load = await this.loadEhDatabase();
         if (need_load) {
             const db = await this.initDB();
-            this.tagstore = await this.loadTrieFromDB(db);
+            this.tagstore = await this.loadEngineFromDB(db);
             this.db = db;
         }
     },
 
     async loadEhDatabase() {
-        const res = await fetch("https://api.github.com/repos/EhTagTranslation/Database/releases");
-        const json = await res.json();
-        const version = localStorage.getItem("tagdatabase");
-        if (version == json[0].tag_name) {
+        if (!needUpdate()) {
             return true;
         }
-        this.ver = json[0].tag_name;
-        const script = document.createElement("script");
-        script.src = `https://github.com/EhTagTranslation/Database/releases/download/${this.ver}/db.text.js`;
-        document.body.appendChild(script);
+        // 加载中
+        const loading = document.createElement("div");
+        loading.innerHTML = `<div id="loading-mask">
+            <div class="spinner"></div>
+                <p>更新EHTag数据库...</p>
+            </div>`;
+        document.body.appendChild(loading);
+        // 删除旧数据
         indexedDB.deleteDatabase('TagDatabase').onsuccess = () => {
             console.log("delete old database");
         };
+        // 获取新数据
+        const script = document.createElement("script");
+        script.src = "https://github.com/EhTagTranslation/Database/releases/latest/download/db.text.js";
+        document.body.appendChild(script);
         return false;
-    },
-
-    async storeDatas(tagdata) {
-        const db = await this.initDB();
-        const data_str = [];
-        const tags = [];
-        for (let i = 1; i < 12; i++) {
-            for (let key of Object.keys(tagdata.data[i].data)) {
-                const value = tagdata.data[i].data[key].name;
-                const str = key + value;
-                if (data_str.includes(str)) {
-                    continue;
-                }
-                data_str.push(str);
-                tags.push({key: key, value: value});
-            }
-        }
-        await this.addDatas(db, tags);
-        this.db = db;
-        localStorage.setItem("tagdatabase", this.ver);
-        this.tagstore = true;
     },
 
     initDB() {
@@ -117,8 +119,10 @@ const dbManager = {
         });
     },
 
-    async addDatas(db, datas) {
+    async addDatas(tagdata) {
+        const db = await this.initDB();
         return new Promise((resolve, reject) => {
+            const data_str = [];
             const transaction = db.transaction(['myObjectStore'], 'readwrite');
             const objectStore = transaction.objectStore('myObjectStore');
             transaction.onerror = (event) => {
@@ -127,19 +131,33 @@ const dbManager = {
             };
             const promises = [];
             let index = 1;
-            for (let item of datas) {
-                const request = objectStore.put(item);
-                this.trie.insert(item.key, index);
-                this.trie.insert(item.value, index);
-                index++;
-                promises.push(new Promise((resolve, reject) => {
-                    request.onsuccess = () => resolve();
-                    request.onerror = (event) => {
-                        console.error(`Error adding data for key "${key}":`, event.target.error);
-                        reject(event.target.error);
-                    };
-                }));
+            for (let i = 1; i < 12; i++) {
+                for (let key of Object.keys(tagdata.data[i].data)) {
+                    const value = tagdata.data[i].data[key].name;
+                    const str = key + value;
+                    if (data_str.includes(str)) {
+                        continue;
+                    }
+                    data_str.push(str);
+                    const item = { key: key, value: value };
+                    const request = objectStore.put(item);
+                    this.engine.addData(index, item.value, item.key);
+                    index++;
+                    promises.push(new Promise((resolve, reject) => {
+                        request.onsuccess = () => resolve();
+                        request.onerror = (event) => {
+                            console.error(`Error adding data for key "${key}":`, event.target.error);
+                            reject(event.target.error);
+                        };
+                    }));
+                }
             }
+            this.db = db;
+            // 记录更新时间
+            localStorage.setItem("lastupdate", Date.now());
+            this.tagstore = true;
+            // 加载中消失
+            document.getElementById("loading-mask").style.display = "none";
             Promise.all(promises).then(() => {
                 console.log('Transaction completed successfully');
                 resolve();
@@ -150,7 +168,7 @@ const dbManager = {
         });
     },
 
-    async loadTrieFromDB(db) {
+    async loadEngineFromDB(db) {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(['myObjectStore'], 'readonly');
             const objectStore = transaction.objectStore('myObjectStore');
@@ -159,16 +177,15 @@ const dbManager = {
                 const cursor = event.target.result;
                 if (cursor) {
                     const data = cursor.value;
-                    this.trie.insert(data.key, data.id);
-                    this.trie.insert(data.value, data.id);
+                    this.engine.addData(data.id, data.value, data.key);
                     cursor.continue();
                 } else {
-                    console.log('Loaded trie from DB');
+                    console.log('Loaded data from DB');
                     resolve(true);
                 }
             };
             request.onerror = (event) => {
-                console.error('Error loading trie from DB:', event.target.error);
+                console.error('Error loading data from DB:', event.target.error);
                 reject(false);
             };
         });
@@ -194,14 +211,14 @@ const dbManager = {
         if (!this.tagstore) {
             return [];
         }
-        const ids = this.trie.search(prefix);
+        const ids = this.engine.search(prefix);
         const results = await this.getDataByIds(Array.from(ids));
         return results.map(data => (data != null) ? [data.value, data.key] : null);
     }
 };
 
 function load_ehtagtranslation_db_text(data) {
-    dbManager.storeDatas(data);
+    dbManager.addDatas(data);
 }
 
 let isMouseOverSuggestions = false;
