@@ -201,7 +201,7 @@ td {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.comic-item .title {
+.comic-item .comic-title {
     margin-top: 10px;
     font-size: 12px;
     font-weight: bold;
@@ -234,7 +234,7 @@ td {
     gap: 5px;
 }
 
-.comic-item:hover .info-popup {
+.comic-title:hover .info-popup {
     display: block;
 }
 

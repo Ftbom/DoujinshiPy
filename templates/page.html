@@ -189,9 +189,9 @@
             var source_element = `<span class="source-badge" onclick="filter_source('${data.source}')">${data.source}</span>`;
             html += `<div class="comic-item">
         <div class="comic-cover">
-        <img id="${data.id}" style="height:40px;width:40px;" src="{{ url_for('static', filename='loading.gif') }}" alt="${data.title}">
+        <img id="${data.id}" style="height:40px;width:40px;" onclick="read('${data.id}')" src="{{ url_for('static', filename='loading.gif') }}" alt="${data.title}">
         </div>
-        <div class="title" onclick="read('${data.id}')">${data.title}</div>
+        <div class="comic-title">${data.title}
         <div class="info-popup">
             <div class="info-row">
                 <span class="info-label">源:</span>
@@ -212,6 +212,7 @@
             </div>
             <hr class="tag-hr">
             ${tags_element}
+        </div>
         </div>
     </div>`;
         }
