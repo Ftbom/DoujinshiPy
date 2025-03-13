@@ -95,7 +95,7 @@
         }
         return html;
     }
-    function getTagsHtml(tags) {
+    function getTagsHtml(tags, translated_tags) {
         let html = "";
         let language = "";
         let group = "";
@@ -108,13 +108,18 @@
         let cosplayer = "";
         let mixed = "";
         let category = "";
-        for (let tag of tags) {
+        for (let i = 0; i < tags.length; i++) {
+            let tag = tags[i];
+            const tag_key = tag;
+            if (translated_tags != null) {
+                tag = translated_tags[i];
+            }
             let tag_html = null;
             const tag_names = tag.split(":");
             if (tag_names.length == 1) {
-                tag_html = `<span class="tag-badge" onclick="filter_tag('${tag}')">${tag_names[0]}</span>`
+                tag_html = `<span class="tag-badge" onclick="filter_tag('${tag_key}')">${tag_names[0]}</span>`
             } else {
-                tag_html = `<span class="tag-badge" onclick="filter_tag('${tag}')">${tag_names[1]}</span>`
+                tag_html = `<span class="tag-badge" onclick="filter_tag('${tag_key}')">${tag_names[1]}</span>`
             }
             if (tag.search("language:") != -1) {
                 language += tag_html;
@@ -172,9 +177,9 @@
             //生成tag字符串
             var tags_element = "";
             if ("translated_tags" in data) {
-                tags_element = getTagsHtml(data.translated_tags);
+                tags_element = getTagsHtml(data.tags, data.translated_tags);
             } else {
-                tags_element = getTagsHtml(data.tags);
+                tags_element = getTagsHtml(data.tags, null);
             }
             //生成group字符串
             var groups_element = "";
