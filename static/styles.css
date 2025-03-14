@@ -216,7 +216,7 @@ td {
     left: 48%;
     transform: translate(-50%, -50%);
     width: 200px;
-    max-height: 250px;
+    height: 300px;
     background-color: white;
     border: 1px solid #ccc;
     border-radius: 8px;
