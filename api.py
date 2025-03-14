@@ -35,7 +35,7 @@ def verify_token(token: str):
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse("static/favicon.ico")
+    return FileResponse("static/icons/favicon.ico")
 
 @app.get("/")
 def get_status(token: str = Depends(oauth2)) -> dict:
