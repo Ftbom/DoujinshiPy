@@ -207,6 +207,7 @@ td {
     font-weight: bold;
     color: #1c1d1e;
     cursor: pointer;
+    overflow-wrap: break-word;
 }
 
 .comic-item .info-popup {
