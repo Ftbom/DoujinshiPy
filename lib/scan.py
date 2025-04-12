@@ -78,7 +78,7 @@ def scan_to_database(app_state, name: str) -> None:
     logging.info(f"clear the old datas from the {name} library")
     for doujinshi_info in doujinshi_list:
         _name, ext = os.path.splitext(str(doujinshi_info[0]))
-        if source_object.TYPE == SourceType.cloud:
+        if source_object.TYPE == SourceType.cloud or source_object.TYPE == SourceType.cloud_encrypted:
             if not ext in [".zip", ".ZIP"]: # 筛选文件类型
                 doujinshi_list.remove(doujinshi_info)
         elif source_object.TYPE == SourceType.local:

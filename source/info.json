@@ -19,13 +19,9 @@
         "web": true,
         "description": "E-hentai/Exhentai"
     },
-    "hitomi": {
-        "web": true,
-        "description": "Hitomi"
-    },
     "pornhunter": {
         "web": true,
-        "description": "欧美色图"
+        "description": "欧美图"
     },
     "webdav": {
         "web": false,
@@ -34,5 +30,9 @@
     "urlcollection": {
         "web": true,
         "description": "WEB图片集合"
+    },
+    "crypt": {
+        "web": false,
+        "description": "Rclone Crypt"
     }
 }

@@ -126,3 +126,13 @@ WEB图片集合
 ```
 
 添加新项的格式：`<集合名称>#<图片链接(以$分隔)>`
+
+## crypt
+
+需要进行rclone crypt解密的云盘
+
+```
+<自定义显示的名称>: {"type": "crypt", "config": {"passwd": <crypt passwd>, "passwd2": <crypt passwd2>,
+        "passwd_obscured": <passwd是否经过混淆>, "name_encoding": <crypt文件名加密编码，默认base32>,
+        "name_obfuscate": <crypt文件名加密standard或obfuscate>, "source": {"type": <云盘类型>, "config": <云盘配置>}}}
+```

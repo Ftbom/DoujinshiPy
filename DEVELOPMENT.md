@@ -15,7 +15,7 @@ class Source:
     def __init__(self, config) -> None:
         pass
     
-    # 返回值 (文件名,文件ID)的列表
+    # 返回值(文件名,文件ID)的列表
     def get_doujinshi(self) -> list[tuple[str]]:
         pass
     
@@ -24,6 +24,39 @@ class Source:
     #        "headers": {<下载文件的headers>}, "proxy": {<下载文件的代理设置>}}
     def get_file(self, file_id: str) -> dict:
         pass
+```
+
+### 需解密的云盘文件
+
+```python
+class Source:
+    TYPE = SourceType.cloud_encrypted
+    SLEEP = 0.1 # 连续获取文件时的停顿时间，防止触发限制
+
+    # @config 从配置文件中读取的json对象
+    def __init__(self, config) -> None:
+        pass
+    
+    # 返回值(文件名,文件ID)的列表
+    def get_doujinshi(self) -> list[tuple[str]]:
+        pass
+    
+    # @file_id 文件ID
+    # 返回值 固定
+    def get_file(self, file_id: str) -> dict:
+        return {"url": f"decrypt_{file_id}", "suffix_range": False, "headers": {}, "proxy": {}}
+    
+    # @file_id 文件ID
+    # 返回值 完全解密后的文件大小(byte)
+    def decrypted_file_size(self, file_id: str) -> int:
+        pass
+    
+    # @file_id 文件ID
+    # @start 请求bytes的起始位(针对解密后的文件)
+    # @end 请求bytes的截止位(针对解密后的文件)
+    # 返回值 解密后的bytes(通过yield返回)
+    def decrypted_bytes(self, file_id: str, start: int, end: int):
+        yield result_bytes
 ```
 
 ### 来自网站的内容
@@ -99,12 +132,11 @@ def img_processor(self, img_bytes: bytes) -> bytes:
 >在cover文件夹下，`cover/info.json`中为插件信息
 
 ```python
-# @source doujinshi对应的源对象（一般用不上）
 # @proxy 代理设置
-# @doujinshi doujinshi数据
+# @doujinshi doujinshi信息
 # @url 用于辅助获取封面的信息
 # 返回值 封面bytes
-def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
+def get_cover(proxy, doujinshi: Doujinshi, url) -> bytes:
     if url == None:
         return b''
     return b''
@@ -115,12 +147,11 @@ def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
 >在tag文件夹下，`tag/info.json`中为插件信息
 
 ```python
-# @source doujinshi对应的源对象（一般用不上）
 # @proxy 代理设置
-# @doujinshi doujinshi数据
-# @url 用于辅助获取封面的信息
+# @doujinshi doujinshi信息
+# @url 用于辅助获取封面的信息（例如链接）
 # 返回值 tag列表
-def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list[str]:
+def get_tag(proxy, doujinshi: Doujinshi, url) -> list[str]:
     if url == None:
         return []
     return []

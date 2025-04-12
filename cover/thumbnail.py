@@ -84,12 +84,17 @@ def cloud_thumbnail(download_info: dict, sleep_time: float) -> bytes:
     time.sleep(1)
     return ibytes
 
-def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
+def get_cover(app_state, doujinshi: Doujinshi, url) -> bytes:
     if doujinshi.type == SourceType.web:
         raise RuntimeError("this source not support generate thumbnail")
     # get file identifier
+    source = app_state["sources"][doujinshi.source]
     file_identifier = source.get_file(doujinshi.identifier)
     if doujinshi.type == SourceType.local:
         return local_thumbnail(file_identifier)
     elif doujinshi.type == SourceType.cloud:
+        return cloud_thumbnail(file_identifier, source.SLEEP)
+    elif doujinshi.type == SourceType.cloud_encrypted:
+        file_identifier["url"] = f'http://{app_state["settings"]["host"]}:{app_state["settings"]["port"]}/decrypt/{doujinshi.source}?id={file_identifier["url"].replace("decrypt_", "")}'
+        file_identifier["headers"] = {"Authorization": "Bearer " + app_state["settings"]["passwd"]}
         return cloud_thumbnail(file_identifier, source.SLEEP)

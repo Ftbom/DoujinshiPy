@@ -1,7 +1,7 @@
 import os
 from lib.utils import Doujinshi, SourceType
 
-def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list[str]:
+def get_tag(proxy, doujinshi: Doujinshi, url) -> list[str]:
     if not doujinshi.type == SourceType.local:
         return []
     path = doujinshi.identifier

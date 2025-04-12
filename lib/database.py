@@ -47,7 +47,7 @@ def get_random_doujinshi_list(client, num: int) -> dict:
     if list_length == 0:
         return []
     # 随机选择生成索引
-    random_indexs = random.sample(range(0, list_length), num)
+    random_indexs = random.sample(range(0, list_length), min(num, list_length))
     doujinshi = []
     for i in random_indexs:
         result = client.lindex("data:doujinshis", i)

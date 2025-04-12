@@ -51,6 +51,7 @@ class SourceType(Enum):
     local = 0
     cloud = 1
     web = 2
+    cloud_encrypted = 3
 
 class Doujinshi(SQLModel, table = True):
     id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # 自动生成id
@@ -78,6 +79,8 @@ def doujinshi_from_json(id, result: dict) -> Doujinshi:
         type = SourceType.web
     elif result["type"] == "cloud":
         type = SourceType.cloud
+    elif result["type"] == "cloud_encrypted":
+        type = SourceType.cloud_encrypted
     doujinshi = Doujinshi(id = uuid.UUID(id), title = result["title"], pagecount = pagecount,
                           tags = result["tags"], groups = result["groups"], identifier = result["identifier"],
                           type = type, source = result["source"])

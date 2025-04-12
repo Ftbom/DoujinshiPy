@@ -11,7 +11,7 @@ def search_name(name: str, proxy: dict) -> str:
     url = soup.find("table", class_ = "itg").find_all("tr")[1].find("td", class_ = "gl3c").a.attrs["href"]
     return url
 
-def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
+def get_cover(proxy, doujinshi: Doujinshi, url) -> bytes:
     if url == None:
         name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
         url = search_name(name, proxy)

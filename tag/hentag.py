@@ -9,7 +9,7 @@ MIXED_TAGS = ['kodomo doushi', 'animal on animal', 'body swap', 'multimouth blow
 CATEGORIES_TRANS = {'manga': 'manga', 'doujin': 'doujinshi', 'artist cg': 'artistcg', 'game cg': 'gamecg', 'non-hentai': 'non-h',
                     'western': 'western'}
 
-def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list:
+def get_tag(proxy, doujinshi: Doujinshi, url) -> list:
     if url == None:
         name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
         url = "https://hentag.com/api/v1/search/vault/title"

@@ -33,7 +33,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
         client.set("batch_operation", f"finish setting group {count}/{num}")
     client.set("batch_operation", "finished")
 
-def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> None:
+def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func, thumbnail: bool = False) -> None:
     client = app_state["redis_client"]
     num = len(id_list)
     count = 0
@@ -63,8 +63,10 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func) -> N
                 continue
         # 获取信息
         try:
-            img_bytes = func(app_state["sources"][result["source"]], app_state["settings"]["proxy"],
-                 doujinshi_from_json(id, result), url) # 获取封面的函数
+            if thumbnail:
+                img_bytes = func(app_state, doujinshi_from_json(id, result), url) # 获取封面的函数
+            else:
+                img_bytes = func(app_state["settings"]["proxy"], doujinshi_from_json(id, result), url) # 获取封面的函数
             if len(img_bytes) > 0:
                 with open(cover_path, "wb") as f:
                     f.write(img_bytes)
@@ -106,8 +108,7 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
             logging.warning(f"don't find id {id}, skip getting tag")
         else:
             try:
-                new_tags = func(app_state["sources"][result["source"]], app_state["settings"]["proxy"],
-                                doujinshi_from_json(id, result), url) # 获取tag的函数
+                new_tags = func(app_state["settings"]["proxy"], doujinshi_from_json(id, result), url) # 获取tag的函数
                 set_metadata_of_doujinshi(client, id, new_tags, replace_old)
                 logging.info(f"get tag for {id}")
             except:

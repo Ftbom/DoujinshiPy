@@ -14,9 +14,5 @@
     "hentag": {
         "name": "Hentag",
         "description": "通过Hentag获取tag"
-    },
-    "hitomi": {
-        "name": "Hitomi",
-        "description": "Hitomi"
     }
 }

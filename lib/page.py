@@ -59,6 +59,10 @@ def get_page_count(app_state, doujinshi: dict, id: str) -> int:
             pagecount = local_pagecount(file_identifier)
         elif doujinshi["type"] == "cloud":
             pagecount = cloud_pagecount(file_identifier)
+        elif doujinshi["type"] == "cloud_encrypted":
+            file_identifier["url"] = f'http://{app_state["settings"]["host"]}:{app_state["settings"]["port"]}/decrypt/{doujinshi["source"]}?id={file_identifier["url"].replace("decrypt_", "")}'
+            file_identifier["headers"] = {"Authorization": "Bearer " + app_state["settings"]["passwd"]}
+            pagecount = cloud_pagecount(file_identifier)
     except Exception as e:
         logging.error(f"fail to get pagecount of doujinshi {id}, error message: {e}")
         return 0
@@ -109,16 +113,16 @@ def cache_page(client, type, id, num, arg1, arg2, arg3 = None): # 缓存页码
                 page_bytes = requests.get(arg1["urls"][num], proxies = arg2, headers = arg1["headers"]).content # 获取链接内容
             else:
                 page_bytes = requests.get(arg1["url"], proxies = arg2, headers = arg1["headers"]).content # 获取链接内容
-        elif type == SourceType.cloud:
-            page_io = arg1.open(arg2[num]) # 读取远程zip
-            page_bytes = page_io.read()
-            page_io.close()
         elif type == SourceType.local:
             if not arg3:
                 page_io = arg1.open(arg2[num]) # 读取zip或rar
             else:
                 page_io = arg1.read([arg2[num]])[arg2[num]] # 读取7z
                 arg1.reset()
+            page_bytes = page_io.read()
+            page_io.close()
+        else:
+            page_io = arg1.open(arg2[num]) # 读取远程zip
             page_bytes = page_io.read()
             page_io.close()
         # 更新缓存大小，过大则清空缓存
@@ -210,13 +214,16 @@ def cloud_page_read(app_state, doujinshi: Doujinshi) -> None:
     client = app_state["redis_client"]
     try:
         download_info = sources[doujinshi.source].get_file(doujinshi.identifier)
+        if doujinshi.type == SourceType.cloud_encrypted:
+            download_info["url"] = f'http://{app_state["settings"]["host"]}:{app_state["settings"]["port"]}/decrypt/{doujinshi.source}?id={download_info["url"].replace("decrypt_", "")}'
+            download_info["headers"] = {"Authorization": "Bearer " + app_state["settings"]["passwd"]}
         zip_file = remotezip.RemoteZip(download_info["url"], headers = download_info["headers"],
                             support_suffix_range = download_info["suffix_range"], proxies = download_info["proxy"])
     except Exception as e:
         logging.error(f"fail to read doujinshi {str(doujinshi.id)}, error message: {e}")
         return
     filelist = archive_filelist(zip_file, True, "zip")
-    archive_cache_page(client, SourceType.cloud, str(doujinshi.id), len(filelist), 
+    archive_cache_page(client, doujinshi.type, str(doujinshi.id), len(filelist), 
                             sources[doujinshi.source].SLEEP, zip_file, filelist)
     zip_file.close()
 
@@ -252,10 +259,10 @@ def read_pages(app_state, id: str) -> None:
     # 开始缓存页面
     if result.type == SourceType.web:
         web_page_read(app_state, result)
-    elif result.type == SourceType.cloud:
-        cloud_page_read(app_state, result)
     elif result.type == SourceType.local:
         local_page_read(app_state, result)
+    else:
+        cloud_page_read(app_state, result)
 
 def get_page_info(app_state, id: str, num: int) -> dict:
     client = app_state["redis_client"]

@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from lib.utils import Doujinshi
 
-def get_tag(source, proxy, doujinshi: Doujinshi, url) -> list[str]:
+def get_tag(proxy, doujinshi: Doujinshi, url) -> list[str]:
     if url == None:
         name = re.sub(r"[\【\[][^\\\]\【\】]+[\】\]]", "", doujinshi.title).strip()
         res = requests.get(f"https://www.wnacg.com/search/?q={name}&f=_all&s=create_time_DESC&syn=yes", proxies = proxy,

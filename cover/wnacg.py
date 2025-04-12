@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from lib.utils import Doujinshi
 
-def get_cover(source, proxy, doujinshi: Doujinshi, url) -> bytes:
+def get_cover(proxy, doujinshi: Doujinshi, url) -> bytes:
     if url != None:
         res = requests.get(url, proxies = proxy,
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0"})
