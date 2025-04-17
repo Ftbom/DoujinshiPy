@@ -19,8 +19,9 @@ oauth2 = OAuth2PasswordBearer(tokenUrl = "token")
 app_state = {
     "settings": load_settings(),
     "sources": load_sources(), # 从配置文件读取源配置
-    "redis_client": redis.Redis(decode_responses = True) # 创建redis客户端
 }
+
+app_state["redis_client"] = redis.Redis(decode_responses = True, db = app_state["settings"]["redis_db"]) # 创建redis客户端
 
 # 自定义 token 验证函数
 def verify_token(token: str):

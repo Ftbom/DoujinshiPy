@@ -2,10 +2,12 @@ import os
 import time
 import logging
 import requests
-from lib.utils import Doujinshi, SourceType, add_doujinshi_to_redis, delete_doujinshi_from_redis, get_all_values_from_list
+from lib.utils import (Doujinshi, SourceType, add_doujinshi_to_redis, delete_doujinshi_from_redis,
+                       get_all_values_from_list, clear_keys_from_redis)
 
 def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_replace: bool) -> None:
     client = app_state["redis_client"]
+    clear_keys_from_redis(client, "search_cache")
     num = len(id_list)
     infos = {}
     dids = get_all_values_from_list(client, "data:doujinshis")
@@ -65,6 +67,7 @@ def scan_to_database(app_state, name: str) -> None:
     client = app_state["redis_client"]
     client.set("scan_source_name", name) # 记录源名称
     logging.info(f"start scanning the {name} library...")
+    clear_keys_from_redis(client, "search_cache") # 删除搜索缓存
     try:
         client.set("scan_status_code", 1) # 设置状态码
         logging.info(f"start getting the doujinshi list of {name} library...")

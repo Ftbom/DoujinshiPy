@@ -404,10 +404,22 @@ def load_ehtag_database_to_redis(app_state) -> None:
             for k in tag_database[key].keys():
                 client.hset(f"ehtag:{key_}", mapping = {k: tag_database[key][k]})
 
+def clear_keys_from_redis(client, key_prefix: str) -> None:
+    if not key_prefix.endswith(":"):
+        key_prefix = key_prefix + ":"
+    cursor = 0
+    while True:
+        cursor, keys = client.scan(cursor = cursor, match = f"{key_prefix}*")
+        if keys:
+            # 删除匹配的键
+            client.delete(*keys)
+        if cursor == 0:
+            break
+
 def app_init(app_state) -> None:
     client = app_state["redis_client"]
     try:
-        client.flushall()
+        client.flushdb()
     except:
         print("please start redis first")
         exit()

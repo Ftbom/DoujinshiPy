@@ -19,6 +19,7 @@ with open(".data/config.json", "w", encoding = "utf-8") as f:
         "settings": {
             "host": "127.0.0.1",
             "port": 9000,
+            "redis_db": 0, # redis数据库编号
             "proxy": "",
             "proxy_webpage": False,
             "passwd": "demo",

@@ -134,5 +134,6 @@ WEB图片集合
 ```
 <自定义显示的名称>: {"type": "crypt", "config": {"passwd": <crypt passwd>, "passwd2": <crypt passwd2>,
         "passwd_obscured": <passwd是否经过混淆>, "name_encoding": <crypt文件名加密编码，默认base32>,
-        "name_obfuscate": <crypt文件名加密standard或obfuscate>, "source": {"type": <云盘类型>, "config": <云盘配置>}}}
+        "name_obfuscate": <crypt文件名加密standard或obfuscate>, "redis_db": <redis数据库编号，默认0>,
+        "source": {"type": <云盘类型>, "config": <云盘配置>}}}
 ```

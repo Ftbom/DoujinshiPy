@@ -28,9 +28,12 @@ class Source:
         self.__name_obfuscate = False
         if "name_obfuscate" in config:
             self.__name_obfuscate = config["name_obfuscate"]
+        redis_db = 0
+        if "redis_db" in config:
+            redis_db = config["redis_db"]
         self.__source_type = config["source"]["type"]
         self.__source = importlib.import_module(f"source.{config['source']['type']}").Source(config["source"]["config"])
-        self.__redis = redis.Redis(decode_responses = True)
+        self.__redis = redis.Redis(decode_responses = True, db = redis_db)
 
     def __get_bytes(self, download_info: dict, start: int, end: int) -> bytes:
         if start >= end:

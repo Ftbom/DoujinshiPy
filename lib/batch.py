@@ -1,10 +1,11 @@
 import os
 import logging
-from lib.utils import (Group, add_group_to_redis, doujinshi_from_json,
+from lib.utils import (Group, add_group_to_redis, doujinshi_from_json, clear_keys_from_redis,
             get_all_values_from_set, set_group_of_doujinshi, set_metadata_of_doujinshi)
 
 def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old: bool) -> None:
     client = app_state["redis_client"]
+    clear_keys_from_redis(client, "search_cache")
     num = len(id_list)
     new_group = True
     group_id = None
@@ -86,6 +87,7 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func, thum
 
 def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> None:
     client = app_state["redis_client"]
+    clear_keys_from_redis(client, "search_cache")
     num = len(id_list)
     count = 0
     for id in id_list:

@@ -4,7 +4,7 @@ import random
 import logging
 from lib.utils import (get_values_from_list_by_page, get_all_values_from_list, get_all_values_from_set, 
                        delete_group_from_redis, set_name_of_group,set_metadata_of_doujinshi, delete_doujinshi_from_redis,
-                       set_group_of_doujinshi, rm_group_of_doujinshi)
+                       set_group_of_doujinshi, rm_group_of_doujinshi, clear_keys_from_redis)
 
 def get_metadata(client, id: str) -> dict:
     doujinshi = client.hgetall(f"doujinshi:{id}")
@@ -62,6 +62,7 @@ def get_doujinshi_by_id(client, id: str) -> dict:
 def delete_metadata(client, id: str) -> dict:
     if not client.exists(f"doujinshi:{id}"):
         return False
+    clear_keys_from_redis(client, "search_cache")
     delete_doujinshi_from_redis(client, id)
     try:
         os.remove(f".data/thumb/{id}.jpg")
@@ -113,7 +114,7 @@ def filter_doujinshi(ids, results: list, parameters) -> list:
     return matched_ids
 
 def search_doujinshi(client, parameters, max_perpage) -> dict:
-    query_key = "tmp:" + generate_id_from_querys(parameters[0], parameters[1], parameters[2])
+    query_key = "search_cache:" + generate_id_from_querys(parameters[0], parameters[1], parameters[2])
     if not client.exists(query_key):
         # 筛选并缓存结果
         id_list = []
@@ -154,6 +155,7 @@ def search_doujinshi(client, parameters, max_perpage) -> dict:
 def set_metadata(client, id: str, metadata) -> bool:
     if not set_metadata_of_doujinshi(client, id, metadata.tag, True, metadata.title):
         return False
+    clear_keys_from_redis(client, "search_cache")
     logging.info(f"set the metadata of doujinshi {id}")
     return True
 
@@ -179,12 +181,14 @@ def rename_group_by_id(client, id: str, name: str) -> int:
         return -1
     if not set_name_of_group(client, id, name):
         return 0 # 同名group已存在
+    clear_keys_from_redis(client, "search_cache")
     logging.info(f"rename group " + client.get(f"group:{id}") + " to " + name)
     return 1
 
 def delete_group_by_id(client, id: str) -> bool:
     if not client.sismember("data:groups", id):
         return False
+    clear_keys_from_redis(client, "search_cache")
     delete_group_from_redis(client, id)
     logging.info(f"delete group {id}")
     return True
@@ -192,9 +196,11 @@ def delete_group_by_id(client, id: str) -> bool:
 def add_to_group(client, id: str, did: str) -> bool:
     if not client.sismember("data:groups", id):
         return False
+    clear_keys_from_redis(client, "search_cache")
     return set_group_of_doujinshi(client, id, did, False)
 
 def delete_from_group(client, id: str, did: str) -> bool:
     if not client.sismember("data:groups", id):
         return False
+    clear_keys_from_redis(client, "search_cache")
     return rm_group_of_doujinshi(client, id, did)
