@@ -361,6 +361,7 @@ td {
     padding: 10px;
     background: #f8f9fa;
     border-radius: 8px;
+    overflow-wrap: break-word;
 }
 
 .comic-image {
