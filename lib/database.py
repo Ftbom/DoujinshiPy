@@ -36,10 +36,10 @@ def get_metadata(client, id: str) -> dict:
 
 def get_doujinshi_list(client, page, max_perpage) -> dict:
     doujinshi = []
-    results = get_values_from_list_by_page(client, "data:doujinshis", page, max_perpage)
+    total, results = get_values_from_list_by_page(client, "data:doujinshis", page, max_perpage, True)
     for result in results:
         doujinshi.append(get_metadata(client, result))
-    return doujinshi
+    return total, doujinshi
 
 def get_random_doujinshi_list(client, num: int) -> dict:
     # 获取列表的长度
@@ -144,13 +144,13 @@ def search_doujinshi(client, parameters, max_perpage) -> dict:
             count = count + 1
         pipeline.expire(query_key, 1800) # 30min过期
         pipeline.execute()
-    results = get_values_from_list_by_page(client, query_key, parameters[3], max_perpage)
+    total, results = get_values_from_list_by_page(client, query_key, parameters[3], max_perpage, True)
     doujinshi = []
     for result in results:
         if not client.exists(f"doujinshi:{result}"):
             continue
         doujinshi.append(get_metadata(client, result))
-    return doujinshi
+    return total, doujinshi
 
 def set_metadata(client, id: str, metadata) -> bool:
     if not set_metadata_of_doujinshi(client, id, metadata.tag, True, metadata.title):
@@ -170,11 +170,11 @@ def get_doujinshi_by_group(client, id: str, page: int, max_perpage: int) -> dict
     name = client.get(f"group:{id}")
     if name == None:
         return {}
-    results = get_values_from_list_by_page(client, f"data:group_{id}", page, max_perpage)
+    total, results = get_values_from_list_by_page(client, f"data:group_{id}", page, max_perpage, True)
     items = []
     for result in results:
         items.append(get_metadata(client, result)) # 获取metadata
-    return {"name": name, "doujinshis": items}
+    return {"name": name, "doujinshis": items, "total": total}
 
 def rename_group_by_id(client, id: str, name: str) -> int:
     if not client.sismember("data:groups", id):

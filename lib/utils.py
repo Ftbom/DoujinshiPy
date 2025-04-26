@@ -144,9 +144,12 @@ def get_all_values_from_set(client, key):
     return results
 
 # 逐页从list获取数据
-def get_values_from_list_by_page(client, key, page, max_perpage = 15):
+def get_values_from_list_by_page(client, key, page, max_perpage = 15, get_total = False):
     if page == 0:
-        return get_all_values_from_list(client, key, max_perpage)
+        values = get_all_values_from_list(client, key, max_perpage)
+        if get_total:
+            return client.llen(key), values
+        return values
     rev = False
     if page < 0:
         rev = True
@@ -155,11 +158,15 @@ def get_values_from_list_by_page(client, key, page, max_perpage = 15):
         start = end - max_perpage + 1
         values = client.lrange(key, start, end)
         values.reverse()
+        if get_total:
+            return client.llen(key), values
         return values
     else:
         page = page - 1
         start = page * max_perpage  # 页面的起始索引
         end = start + max_perpage - 1  # 页面的结束索引
+        if get_total:
+            return client.llen(key), client.lrange(key, start, end)
         return client.lrange(key, start, end)
 
 # 获取list所有数据

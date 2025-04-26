@@ -254,6 +254,8 @@ def get_doujinshi_by_group_id(id: str, page: int = 0, token: str = Depends(oauth
         result = get_doujinshi_by_group(app_state["redis_client"], id, page, app_state["settings"]["max_num_perpage"])
         if result == {}:
             return JSONResponse({"error": f"group {id} not exists"}, status_code = 404)
+        result["page"] = page
+        result["pageSize"] = app_state["settings"]["max_num_perpage"]
         return {"msg": "success", "data": result}
     except:
         return JSONResponse({"error": f"fail to get doujinshi by group {id}"}, status_code = 500)
@@ -308,13 +310,15 @@ def add_doujinshi_to_group(id: str, did: str, token: str = Depends(oauth2)) -> d
 @app.get("/doujinshi") # 页码从0开始，倒序从-1开始
 def get_doujinshis_by_page(page: int = 0, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_doujinshi_list(app_state["redis_client"], page,
-                        app_state["settings"]["max_num_perpage"])}
+    pagesize = app_state["settings"]["max_num_perpage"]
+    total, doujinshis = get_doujinshi_list(app_state["redis_client"], page, pagesize)
+    return {"msg": "success", "data": {"doujinshis": doujinshis, "total": total, "pageSize": pagesize, "page": page}}
 
 @app.get("/doujinshi/random")
 def get_random_doujinshis(num: int = 5, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    return {"msg": "success", "data": get_random_doujinshi_list(app_state["redis_client"], num)}
+    doujinshis = get_random_doujinshi_list(app_state["redis_client"], num)
+    return {"msg": "success", "data": {"doujinshis": doujinshis, "total": len(doujinshis), "pageSize": app_state["settings"]["max_num_perpage"], "page": 0}}
 
 @app.get("/doujinshi/{id}/metadata")
 def get_doujinshi_metadata(id: str, token: str = Depends(oauth2)) -> dict:
@@ -448,5 +452,6 @@ def search(query: str, page: int = 0, source_name: str = "", group: str = "", to
     query_list = [item for item in query_list if item != ""]
     for i in range(len(query_list)):
         query_list[i] = query_list[i].strip(" ").strip("$")
-    return {"msg": "success", "data": search_doujinshi(app_state["redis_client"], (query_list, group, source_name, page),
-                                        app_state["settings"]["max_num_perpage"])}
+    pagesize = app_state["settings"]["max_num_perpage"]
+    total, doujinshis = search_doujinshi(app_state["redis_client"], (query_list, group, source_name, page), pagesize)
+    return {"msg": "success", "data": {"doujinshis": doujinshis, "total": total, "pageSize": pagesize, "page": page}}

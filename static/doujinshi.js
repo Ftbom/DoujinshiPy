@@ -56,13 +56,13 @@ async function getDatas(query, group, source, page, reverse) {
     }
     const url = `/search?query=${query}&group=${group}&source_name=${source}&page=${page}`;
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
-    return parseDatas(JSON.parse(await res.text()).data)
+    return parseDatas(JSON.parse(await res.text()).data.doujinshis)
 }
 
 async function getRandomDatas(num) {
     const url = `/doujinshi/random?num=${num}`;
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
-    return parseDatas(JSON.parse(await res.text()).data)
+    return parseDatas(JSON.parse(await res.text()).data.doujinshis)
 }
 
 async function setBatch(type, value, datas) {
@@ -120,12 +120,6 @@ async function deleteMetadata(id) {
         return true;
     }
     return false;
-}
-
-async function getGroup() {
-    const res = await fetch("/group", { headers: { Authorization: "Bearer " + token } });
-    let result = JSON.parse(await res.text());
-    return result.data;
 }
 
 async function updateGroup(id, name) {
