@@ -185,6 +185,17 @@
     </div>`;
     }
     async function loadTags() {
+        const loading_element = document.getElementById("loading-tags");
+        if (loading_element == null) {
+            const loading = document.createElement("div");
+            loading.innerHTML = `<div id="loading-tags" class="loading-mask">
+                <div class="spinner"></div>
+                    <p>加载Tags...</p>
+                </div>`;
+            document.body.appendChild(loading);
+        } else {
+            loading_element.style = "";
+        }
         const category_html = await loadTagsByType("category");
         const language_html = await loadTagsByType("language");
         const parody_html = await loadTagsByType("parody");
@@ -199,6 +210,7 @@
         document.getElementById("comic-list").innerHTML = '<div class="container">' + category_html + language_html
             + parody_html + character_html + group_html + artist_html + cosplayer_html + male_html + female_html
             + mixed_html + other_html + '</div>';
+        document.getElementById("loading-tags").style.display = "none";
     }
     async function loadDatas(random) {
         let doujinshiDatas = null;

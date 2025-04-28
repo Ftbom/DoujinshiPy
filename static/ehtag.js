@@ -83,7 +83,7 @@ const dbManager = {
         }
         // 加载中
         const loading = document.createElement("div");
-        loading.innerHTML = `<div id="loading-mask">
+        loading.innerHTML = `<div id="loading-ehtag" class="loading-mask">
             <div class="spinner"></div>
                 <p>更新EHTag数据库...</p>
             </div>`;
@@ -157,7 +157,7 @@ const dbManager = {
             localStorage.setItem("lastupdate", Date.now());
             this.tagstore = true;
             // 加载中消失
-            document.getElementById("loading-mask").style.display = "none";
+            document.getElementById("loading-ehtag").style.display = "none";
             Promise.all(promises).then(() => {
                 console.log('Transaction completed successfully');
                 resolve();

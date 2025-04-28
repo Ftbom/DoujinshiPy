@@ -459,7 +459,7 @@ td {
     word-break: break-word; /* 允许长单词换行 */
 }
 
-#loading-mask {
+.loading-mask {
     position: fixed;
     top: 0;
     left: 0;
