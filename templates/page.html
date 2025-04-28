@@ -11,7 +11,6 @@
 {% block main %}
 <div class="pagetop-buttons">
     <button class="btn btn-secondary" onclick="loadDatas(true)">随机</button>
-    <button class="btn btn-secondary" onclick="loadTags()">TAGS</button>
 </div>
 <div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
@@ -71,8 +70,13 @@
             selectElement += `<option id="name_${group.name}" value="${group.id}">${group.name} (${group.itemCount})</option>`;
         }
         document.getElementById("group").innerHTML += selectElement;
-        document.getElementById("page-input");
-        loadDatas(true);
+        const pre_filter = localStorage.getItem("filter_tag");
+        if (pre_filter == null) {
+            loadDatas(true);
+        } else {
+            localStorage.removeItem("filter_tag");
+            filter_tag(pre_filter);
+        }
     });
 
     async function loadCovers() {
@@ -162,56 +166,6 @@
         html += finishTagsHtml(other, "其他");
         return html;
     }
-    async function loadTagsByType(type) {
-        let tag_html = "";
-        const tags = await getTags(type);
-        for (let tag of tags) {
-            let tag_key = tag.name;
-            let name = tag.name;
-            if ("translated" in tag) {
-                name = tag.translated;
-            }
-            const tag_names = name.split(":");
-            if (tag_names.length > 1) {
-                name = tag_names[1];
-            }
-            tag_html += `<span class="tag-list-badge ${type}-tag-badge" onclick="filter_tag('${tag_key}')">${name} (${tag.itemCount})</span>`;
-        }
-        return `<div class="section">
-      <div class="title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-      <div class="tag-list-badge-wrapper">
-        ${tag_html}
-      </div>
-    </div>`;
-    }
-    async function loadTags() {
-        const loading_element = document.getElementById("loading-tags");
-        if (loading_element == null) {
-            const loading = document.createElement("div");
-            loading.innerHTML = `<div id="loading-tags" class="loading-mask">
-                <div class="spinner"></div>
-                    <p>加载Tags...</p>
-                </div>`;
-            document.body.appendChild(loading);
-        } else {
-            loading_element.style = "";
-        }
-        const category_html = await loadTagsByType("category");
-        const language_html = await loadTagsByType("language");
-        const parody_html = await loadTagsByType("parody");
-        const character_html = await loadTagsByType("character");
-        const group_html = await loadTagsByType("group");
-        const artist_html = await loadTagsByType("artist");
-        const cosplayer_html = await loadTagsByType("cosplayer");
-        const male_html = await loadTagsByType("male");
-        const female_html = await loadTagsByType("female");
-        const mixed_html = await loadTagsByType("mixed");
-        const other_html = await loadTagsByType("other");
-        document.getElementById("comic-list").innerHTML = '<div class="container">' + category_html + language_html
-            + parody_html + character_html + group_html + artist_html + cosplayer_html + male_html + female_html
-            + mixed_html + other_html + '</div>';
-        document.getElementById("loading-tags").style.display = "none";
-    }
     async function loadDatas(random) {
         let doujinshiDatas = null;
         if (random) {
@@ -219,6 +173,7 @@
             document.getElementById("page_button").style = "display: none;";
             doujinshiDatas = await getRandomDatas(4);
         } else {
+            document.getElementById("page_button").style = "";
             // 获取当前查询信息
             const search_group = document.getElementById("group").value;
             const search_source = document.getElementById("source").value;

@@ -28,6 +28,11 @@ def redirect_to_batch(path = None):
 def page():
     return render_template("page.html")
 
+@flask_app.route("/tags")
+@login_required
+def tags():
+    return render_template("tags.html")
+
 @flask_app.route("/read/<path:id>")
 @login_required
 def read(id):
