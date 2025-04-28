@@ -248,7 +248,7 @@ def get_all_groups(token: str = Depends(oauth2)) -> dict:
     return {"msg": "success", "data": get_group_list(app_state["redis_client"])}
 
 @app.get("/group/{id}")
-def get_doujinshi_by_group_id(id: str, page: int = 0, token: str = Depends(oauth2)) -> dict:
+def get_doujinshis_by_group_id(id: str, page: int = 0, token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     try:
         result = get_doujinshi_by_group(app_state["redis_client"], id, page, app_state["settings"]["max_num_perpage"])
@@ -364,7 +364,7 @@ def get_doujinshi_pages(id: str, token: str = Depends(oauth2)) -> dict:
     except:
         return JSONResponse({"error": f"fail to get pages of doujinshi {id}"}, status_code = 500)
 
-@app.get("/doujinshi/{id}/pageinfo/{num}")
+@app.get("/doujinshi/{id}/pageinfo/{num}", include_in_schema = False)
 def get_doujinshi_pageinfo_by_number(id: str, num: int, token: str = Depends(oauth2)):
     verify_token(token)
     # 需逐页爬取且未设置页面代理时

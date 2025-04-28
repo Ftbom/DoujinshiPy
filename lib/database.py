@@ -163,7 +163,7 @@ def get_group_list(client) -> list[str]:
     group_list = []
     results = get_all_values_from_set(client, "data:groups")
     for result in results:
-        group_list.append({"id": result, "name": client.get(f"group:{result}")})
+        group_list.append({"id": result, "name": client.get(f"group:{result}"), "itemCount": client.llen(f"data:group_{result}")})
     return group_list
 
 def get_doujinshi_by_group(client, id: str, page: int, max_perpage: int) -> dict:
