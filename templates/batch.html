@@ -190,7 +190,7 @@
         selectElement = "";
         for (let group of groups) {
             // 添加新选项
-            selectElement += `<option value="${group.id}">${group.name}</option>`;
+            selectElement += `<option value="${group.id}">${group.name}  (${group.itemCount})</option>`;
         }
         document.getElementById("group").innerHTML += selectElement;
         selectElement = "";

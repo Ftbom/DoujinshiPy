@@ -32,6 +32,37 @@ body {
     margin: 0 5px;
 }
 
+.tag-list-badge-wrapper {
+    max-height: 150px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 5px;
+}
+
+.tag-list-badge {
+    display: inline-block;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.category-tag-badge  { background-color: #e53819; }
+.language-tag-badge  { background-color: #e55d19; }
+.parody-tag-badge    { background-color: #e5b219; }
+.character-tag-badge { background-color: #60e519; }
+.group-tag-badge     { background-color: #19e54c; }
+.artist-tag-badge    { background-color: #19e5b2; }
+.cosplayer-tag-badge { background-color: #19b2e5; }
+.male-tag-badge      { background-color: #194ce5; }
+.female-tag-badge    { background-color: #4c19e5; }
+.mixed-tag-badge     { background-color: #b219e5; }
+.other-tag-badge     { background-color: #e519b2; }
+
 .tag-badge {
     display: inline-block;
     background-color: #e7f3fe;
@@ -346,6 +377,13 @@ td {
     justify-content: center;
     gap: 10px;
     margin-top: 20px;
+}
+
+.pagetop-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .reader-container {

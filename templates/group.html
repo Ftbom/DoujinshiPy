@@ -20,6 +20,7 @@ Group操作
                 <th data-field="index" data-sortable="true">序号</th>
                 <th data-field="id" data-visible="false">ID</th>
                 <th data-field="name" data-sortable="true">名称</th>
+                <th data-field="count" data-sortable="true">数目</th>
                 <th data-field="actions">操作</th>
             </tr>
         </thead>
@@ -71,6 +72,7 @@ Group操作
                 index: index.toString(),
                 id: data.id,
                 name: data.name,
+                count: data.itemCount,
                 actions: `
                         <button class="btn btn-warning btn-sm" onclick="handleEdit('${data.id}')">
                             <i class="bi bi-pencil"></i>

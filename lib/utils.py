@@ -8,7 +8,6 @@ import requests
 import importlib
 import threading
 from enum import Enum
-from enum import Enum
 from typing import Union
 from pydantic import BaseModel
 from sqlmodel import SQLModel, Session, select, Field, create_engine
@@ -33,6 +32,19 @@ class OperationType(Enum):
     cover = "cover"
     tag = "tag"
     group = "group"
+
+class TagType(Enum):
+    category = "category"
+    language = "language"
+    parody = "parody"
+    character = "character"
+    group = "group"
+    artist = "artist"
+    cosplayer = "cosplayer"
+    male = "male"
+    female = "female"
+    mixed = "mixed"
+    other = "other"
 
 class BatchOperation(BaseModel):
     operation: OperationType
@@ -66,6 +78,8 @@ class Doujinshi(SQLModel, table = True):
 class Group(SQLModel, table = True):
     id: uuid.UUID = Field(default_factory = uuid.uuid4, primary_key = True) # 自动生成id
     name: str
+
+TAG_TYPES = [item.value for item in TagType]
 
 # json转为Doujinshi类
 def doujinshi_from_json(id, result: dict) -> Doujinshi:
@@ -212,6 +226,57 @@ def translate_tags(client, tags):
                 new_tags.append(tag)
     return "|".join(new_tags)
 
+def process_tagstr(tag):
+    tag_parts = tag.split(":")
+    if len(tag_parts) == 1:
+        tag_type = "other"
+    else:
+        tag_type = tag_parts[0].strip()
+        if not tag_type in TAG_TYPES:
+            tag_type = "other"
+    return tag_type, tag
+
+# 添加tags到redis
+def add_tags_to_redis(client, tags, translated_tags = None):
+    def add_tag(client, tag, translated_tag = None):
+        tag_type, tag_value = process_tagstr(tag)
+        count = client.hget(f"tag_count:{tag_type}", tag_value)
+        if count == None:
+            count = 1
+            if translated_tag != None:
+                client.hset(f"tag_translated:{tag_type}", tag_value, translated_tag)
+        else:
+            count = int(count) + 1
+        client.hset(f"tag_count:{tag_type}", tag_value, count)
+    tags = tags.split("|")
+    translated = False
+    if translated_tags != None:
+        translated_tags = translated_tags.split("|")
+        translated = True
+    for i in range(len(tags)):
+        if tags[i] != "":
+            if translated:
+                add_tag(client, tags[i], translated_tags[i])
+            else:
+                add_tag(client, tags[i])
+
+# 从redis删除tag
+def delete_tags_from_redis(client, tags):
+    def delete_tag(client, tag):
+        tag_type, tag_value = process_tagstr(tag)
+        count = client.hget(f"tag_count:{tag_type}", tag_value)
+        if count == None:
+            return
+        count = int(count)
+        if count == 1:
+            client.hdel(f"tag_count:{tag_type}", tag_value)
+            client.hdel(f"tag_translated:{tag_type}", tag_value)
+        else:
+            client.hset(f"tag_count:{tag_type}", tag_value, count - 1)
+    for tag in tags.split("|"):
+        if not tag == "":
+            delete_tag(client, tag)
+
 # 添加doujinshi到redis
 def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, backup_sql = True) -> None:
     if doujinshi.pagecount == None:
@@ -229,8 +294,12 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, back
         "type": str(doujinshi.type).split(".")[1],
         "source": doujinshi.source
     }
-    if client.exists("ehtag:other"):
+    translated = None
+    if client.exists("ehtag:other"): # 启用了tag翻译
         doujinshi_metadata["translated_tags"] = translate_tags(client, doujinshi.tags)
+        translated = doujinshi_metadata["translated_tags"]
+    # 记录tag
+    add_tags_to_redis(client, doujinshi_metadata["tags"], translated)
     client.hset(f"doujinshi:{did}", mapping = doujinshi_metadata)
     client.rpush("data:doujinshis", did)
     if add_group:
@@ -246,6 +315,7 @@ def delete_doujinshi_from_redis(client, id, title = None, groups = None) -> None
         title = client.hget(f"doujinshi:{id}", "title")
     if groups == None:
         groups = client.hget(f"doujinshi:{id}", "groups")
+    delete_tags_from_redis(client, client.hget(f"doujinshi:{id}", "tags"))
     client.delete(f"doujinshi:{id}")
     client.lrem("data:doujinshis", 0, id)
     for g in groups.split("|"):
@@ -295,6 +365,8 @@ def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = F
     old_tags = client.hget(f"doujinshi:{id}", "tags")
     if old_tags == None:
         return False
+    # 从redis删除旧的tag
+    delete_tags_from_redis(client, old_tags)
     if replace_old and tags != []:
         old_tags = tags
     else:
@@ -305,7 +377,11 @@ def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = F
     old_tags = "|".join(old_tags).strip("|")
     client.hset(f"doujinshi:{id}", "tags", old_tags)
     if client.exists("ehtag:other"):
-        client.hset(f"doujinshi:{id}", "translated_tags", translate_tags(client, old_tags))
+        translated_tags = translate_tags(client, old_tags)
+        add_tags_to_redis(client, old_tags, translated_tags)
+        client.hset(f"doujinshi:{id}", "translated_tags", translated_tags)
+    else:
+        add_tags_to_redis(client, old_tags)
     if title != None:
         client.hset(f"doujinshi:{id}", "title", title)
     mark_modified(client, id)

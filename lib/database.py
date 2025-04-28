@@ -159,6 +159,23 @@ def set_metadata(client, id: str, metadata) -> bool:
     logging.info(f"set the metadata of doujinshi {id}")
     return True
 
+# 获取tag列表
+def get_tag_list(client, tag_type):
+    tag_list = []
+    tags_count = client.hgetall(f"tag_count:{tag_type}")
+    tags_translated = client.hgetall(f"tag_translated:{tag_type}")
+    if tags_translated == {}:
+        translated = False
+    else:
+        translated = True
+    for tag in tags_count.keys():
+        if translated:
+            tag_list.append({"name": tag, "translated": tags_translated[tag],
+                             "itemCount": int(tags_count[tag])})
+        else:
+            tag_list.append({"name": tag, "itemCount": int(tags_count[tag])})
+    return tag_list
+
 def get_group_list(client) -> list[str]:
     group_list = []
     results = get_all_values_from_set(client, "data:groups")

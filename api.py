@@ -242,6 +242,11 @@ def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
         client.delete("batch_operation")
     return {"msg": operation_status}
 
+@app.get("/tags/{tagtype}")
+def get_all_tags(tagtype: TagType, token: str = Depends(oauth2)) -> dict:
+    verify_token(token)
+    return {"msg": "success", "data": get_tag_list(app_state["redis_client"], tagtype.value)}
+
 @app.get("/group")
 def get_all_groups(token: str = Depends(oauth2)) -> dict:
     verify_token(token)

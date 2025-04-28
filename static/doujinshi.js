@@ -18,6 +18,11 @@ async function getGroups() {
     return JSON.parse(await res.text()).data;
 }
 
+async function getTags(type) {
+    const res = await fetch(`/tags/${type}`, { headers: { Authorization: "Bearer " + token } });
+    return JSON.parse(await res.text()).data;
+}
+
 async function getProgress(url) {
     if (rm_group) {
         return [(rm_group_progress[0] == rm_group_progress[1]), `removing groups ${rm_group_progress[0]}/${rm_group_progress[1]}`];
