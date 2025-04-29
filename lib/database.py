@@ -8,10 +8,10 @@ from lib.utils import (get_values_from_list_by_page, get_all_values_from_list, g
 
 def get_metadata(client, id: str) -> dict:
     doujinshi = client.hgetall(f"doujinshi:{id}")
-    tags = doujinshi["tags"].split("|")
+    tags = doujinshi["tags"].split("|$|")
     tags = [item for item in tags if item != ""]
     if "translated_tags" in doujinshi:
-        translated_tags = doujinshi["translated_tags"].split("|")
+        translated_tags = doujinshi["translated_tags"].split("|$|")
         try:
             translated_tags.remove("")
         except:
@@ -20,7 +20,7 @@ def get_metadata(client, id: str) -> dict:
         translated_tags = None
     # 获取group
     groups = []
-    group_ids = doujinshi["groups"].split("|")
+    group_ids = doujinshi["groups"].split("|$|")
     group_ids = [item for item in group_ids if item != ""]
     for gid in group_ids:
         groups.append(client.get(f"group:{gid}"))
@@ -71,7 +71,7 @@ def delete_metadata(client, id: str) -> dict:
     return True
 
 def generate_id_from_querys(query_list, group, source_name):
-    q_str = f"{'|'.join(query_list)}_{group}_{source_name}"
+    q_str = f"{'|$|'.join(query_list)}_{group}_{source_name}"
     return hashlib.md5(q_str.encode('utf-8')).hexdigest()
 
 def filter_doujinshi(ids, results: list, parameters) -> list:
@@ -81,10 +81,10 @@ def filter_doujinshi(ids, results: list, parameters) -> list:
     matched_ids = []
     for i in range(len(results)):
         result = results[i]
-        match_list = result["tags"].lower().split("|")
+        match_list = result["tags"].lower().split("|$|")
         match_list = [item for item in match_list if item != ""]
         if "translated_tags" in result:
-            match_list.extend(result["translated_tags"].lower().split("|"))
+            match_list.extend(result["translated_tags"].lower().split("|$|"))
         match_list.append(result["title"].lower())
         matched = True
         for q in query_filter:
@@ -104,7 +104,7 @@ def filter_doujinshi(ids, results: list, parameters) -> list:
         if not matched:
             continue
         if len(group_filter) != 0: # 应用group筛选
-            r_groups = result["groups"].split("|")
+            r_groups = result["groups"].split("|$|")
             if not group_filter in r_groups:
                 continue
         if len(source_filter) != 0: # 应用源筛选

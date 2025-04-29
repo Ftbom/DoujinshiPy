@@ -212,9 +212,9 @@ def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> di
             return JSONResponse({"msg": "some batch operations is running, please wait and try again later"}, status_code = 503)
         client.set("batch_operation", "started")
     if setting.operation == OperationType.group:
-        if "|" in setting.name:
+        if "|$|" in setting.name:
             client.delete("batch_operation")
-            return JSONResponse({"error": "group name should not contain '|'"}, status_code = 400)
+            return JSONResponse({"error": "group name should not contain '|$|'"}, status_code = 400)
         threading.Thread(target = batch_set_group, args = (app_state, setting.name, setting.target, setting.replace)).start()
         return {"msg": "start setting group, get the status: /batch"}
     else:

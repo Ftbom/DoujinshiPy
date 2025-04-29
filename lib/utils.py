@@ -198,7 +198,7 @@ def get_all_values_from_list(client, key, max_perpage = 15):
 
 # 翻译tags
 def translate_tags(client, tags):
-    tags = tags.split("|")
+    tags = tags.split("|$|")
     tags = [item for item in tags if item != ""]
     new_tags = []
     for tag in tags:
@@ -224,7 +224,7 @@ def translate_tags(client, tags):
                     new_tags.append(tag)
             else:
                 new_tags.append(tag)
-    return "|".join(new_tags)
+    return "|$|".join(new_tags)
 
 def process_tagstr(tag):
     tag_parts = tag.split(":")
@@ -248,10 +248,10 @@ def add_tags_to_redis(client, tags, translated_tags = None):
         else:
             count = int(count) + 1
         client.hset(f"tag_count:{tag_type}", tag_value, count)
-    tags = tags.split("|")
+    tags = tags.split("|$|")
     translated = False
     if translated_tags != None:
-        translated_tags = translated_tags.split("|")
+        translated_tags = translated_tags.split("|$|")
         translated = True
     for i in range(len(tags)):
         if tags[i] != "":
@@ -273,7 +273,7 @@ def delete_tags_from_redis(client, tags):
             client.hdel(f"tag_translated:{tag_type}", tag_value)
         else:
             client.hset(f"tag_count:{tag_type}", tag_value, count - 1)
-    for tag in tags.split("|"):
+    for tag in tags.split("|$|"):
         if not tag == "":
             delete_tag(client, tag)
 
@@ -303,7 +303,7 @@ def add_doujinshi_to_redis(client, doujinshi: Doujinshi, add_group = False, back
     client.hset(f"doujinshi:{did}", mapping = doujinshi_metadata)
     client.rpush("data:doujinshis", did)
     if add_group:
-        for g in doujinshi.groups.split("|"):
+        for g in doujinshi.groups.split("|$|"):
             if not g == "":
                 client.rpush(f"data:group_{g}", did)
     if backup_sql:
@@ -318,7 +318,7 @@ def delete_doujinshi_from_redis(client, id, title = None, groups = None) -> None
     delete_tags_from_redis(client, client.hget(f"doujinshi:{id}", "tags"))
     client.delete(f"doujinshi:{id}")
     client.lrem("data:doujinshis", 0, id)
-    for g in groups.split("|"):
+    for g in groups.split("|$|"):
         if not g == "":
             client.lrem(f"data:group_{g}", 0, id)
     mark_modified(client, id)
@@ -329,16 +329,16 @@ def set_group_of_doujinshi(client, gid: str, target_id, replace_old: bool = Fals
     if groups == None:
         return False
     if replace_old:
-        for g in groups.split("|"):
+        for g in groups.split("|$|"):
             if not g == "":
                 client.lrem(f"data:group_{g}", 0, target_id)
         groups = [gid]
     else:
-        groups = groups.split("|")
+        groups = groups.split("|$|")
         if gid in groups:
             return True
         groups.append(gid)
-    client.hset(f"doujinshi:{target_id}", "groups", "|".join(groups).strip("|"))
+    client.hset(f"doujinshi:{target_id}", "groups", "|$|".join(groups).strip("|$|"))
     client.rpush(f"data:group_{gid}", target_id)
     mark_modified(client, target_id)
     return True
@@ -348,11 +348,11 @@ def rm_group_of_doujinshi(client, gid: str, target_id) -> bool:
     groups = client.hget(f"doujinshi:{target_id}", "groups")
     if groups == None:
         return False
-    groups = groups.split("|")
+    groups = groups.split("|$|")
     if not gid in groups:
         return True
     groups.remove(gid)
-    client.hset(f"doujinshi:{target_id}", "groups", "|".join(groups).strip("|"))
+    client.hset(f"doujinshi:{target_id}", "groups", "|$|".join(groups).strip("|$|"))
     client.lrem(f"data:group_{gid}", 0, target_id)
     mark_modified(client, target_id)
     return True
@@ -370,11 +370,11 @@ def set_metadata_of_doujinshi(client, id: str, tags: list, replace_old: bool = F
     if replace_old and tags != []:
         old_tags = tags
     else:
-        old_tags = old_tags.split("|")
+        old_tags = old_tags.split("|$|")
         for t in tags:
             if not t in old_tags:
                 old_tags.append(t)
-    old_tags = "|".join(old_tags).strip("|")
+    old_tags = "|$|".join(old_tags).strip("|$|")
     client.hset(f"doujinshi:{id}", "tags", old_tags)
     if client.exists("ehtag:other"):
         translated_tags = translate_tags(client, old_tags)
@@ -412,10 +412,10 @@ def delete_group_from_redis(client, id) -> None:
     for _id in ids:
         groups = client.hget(f"doujinshi:{_id}", "groups")
         new_groups = []
-        for g in groups.split("|"):
+        for g in groups.split("|$|"):
             if not g == id:
                 new_groups.append(g)
-        client.hset(f"doujinshi:{_id}", "groups", "|".join(new_groups))
+        client.hset(f"doujinshi:{_id}", "groups", "|$|".join(new_groups))
         mark_modified(client, _id)
     mark_modified(client, id, True)
 

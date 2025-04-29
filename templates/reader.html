@@ -4,25 +4,27 @@
 阅读
 {% endblock %}
 
-{% block navbar %}
-{% include "navbar.html" %}
-{% endblock %}
-
 {% block main %}
+<style>
+    body {
+        padding: 0px;
+    }
+</style>
 <div class="reader-container">
-    <div class="reader-header">
-    {% if title %}
+    <div id="title-header" style="display: block" class="reader-header">
+        {% if title %}
         {{ title }}
-    {% else %}
+        {% else %}
         Doujinshi不存在！
-    {% endif %}
+        {% endif %}
     </div>
     {% if title %}
     <div class="image-wrapper" id="comic-pages">
         <div class="nav-left" onclick="prevPage()"></div>
         <div class="nav-right" onclick="nextPage()"></div>
+        <div class="nav-center" onclick="showMenu()"></div>
     </div>
-    <div class="footer-controls">
+    <div id="page-button" style="display: flex" class="footer-controls">
         <div class="d-flex gap-3 align-items-center">
             <button class="btn btn-primary" onclick="prevPage()">上一页</button>
             <div class="page-selector">
@@ -81,6 +83,16 @@
             loadPage(currentPage + 1);
         }
     }
+    function showMenu() {
+        const header = document.getElementById("title-header");
+        if (header.style.display == "block") {
+            header.style.display = "none";
+            document.getElementById("page-button").style.display = "none";
+        } else {
+            header.style.display = "block";
+            document.getElementById("page-button").style.display = "flex";
+        }
+    }
 </script>
 <script>
     const loading = []
@@ -88,6 +100,7 @@
     var currentPage = 0;
     //初始化
     $(document).ready(async function () {
+        document.getElementsByClassName("container")[0].classList = [];
         const id = window.location.href.split("/").slice(-1)[0];
         images = await getPages(id);
         let html = "";
@@ -100,6 +113,7 @@
         document.getElementById("comic-pages").innerHTML += html2;
         document.getElementById("page_0").style = "height:40px;width:40px;";
         loadPage(0);
+        showMenu();
     });
 </script>
 {% endif %}

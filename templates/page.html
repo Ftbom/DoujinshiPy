@@ -9,9 +9,6 @@
 {% endblock %}
 
 {% block main %}
-<div class="pagetop-buttons">
-    <button class="btn btn-secondary" onclick="loadDatas(true)">随机</button>
-</div>
 <div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
         <select id="sort" class="form-select">
@@ -32,6 +29,7 @@
     <div class="col-12 col-md-3">
         <div class="input-group position-relative">
             <input type="text" id="search" class="form-control" placeholder="搜索" onkeydown="handleSuggestions(event)">
+            <button class="btn btn-secondary" onclick="loadDatas(true)">随机</button>
             <button class="btn btn-primary" onclick="search()">
                 <i class="bi bi-search"></i>
             </button>

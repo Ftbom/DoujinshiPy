@@ -30,7 +30,7 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
                         os.remove(f".data/thumb/{infos[metadata['id']][0]}.jpg")
                     delete_doujinshi_from_redis(client, infos[metadata["id"]][0], infos[metadata["id"]][1], infos[metadata["id"]][2])
             doujinshi = Doujinshi(title = metadata["title"], pagecount = metadata["pagecount"],
-                        tags = "|".join(metadata["tags"]), identifier = metadata["id"],
+                        tags = "|$|".join(metadata["tags"]), identifier = metadata["id"],
                         type = SourceType.web, source = source_name)
             # 保存封面
             with open(f".data/thumb/{str(doujinshi.id)}.jpg", "wb") as f:
