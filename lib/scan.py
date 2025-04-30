@@ -23,6 +23,7 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
             if metadata["id"] in infos:
                 if not is_replace:
                     client.set("add_status", f"finish adding to library {count}/{num}")
+                    client.set("add_progress", count/num)
                     continue
                 else:
                     # 覆盖旧数据
@@ -42,6 +43,7 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
             logging.error(f"fail to add {id} of {source_name} source to library, error message: {e}")
         time.sleep(app_state["sources"][source_name].SLEEP)
         client.set("add_status", f"finish adding to library {count}/{num}")
+        client.set("add_progress", count/num)
     client.set("add_status", "finished")
 
 def clean_database_by_source_name(client, name: str, doujinshi_list: list) -> list:

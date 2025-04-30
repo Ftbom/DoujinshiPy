@@ -10,28 +10,80 @@
         padding: 0px;
     }
 </style>
-<div class="reader-container">
+<div id="reader-container" class="reader-container">
     <div id="title-header" style="display: block" class="reader-header">
-        {% if title %}
+    {% if title %}
         {{ title }}
-        {% else %}
+    {% else %}
         Doujinshi不存在！
-        {% endif %}
+    {% endif %}
     </div>
     {% if title %}
     <div class="image-wrapper" id="comic-pages">
-        <div class="nav-left" onclick="prevPage()"></div>
-        <div class="nav-right" onclick="nextPage()"></div>
-        <div class="nav-center" onclick="showMenu()"></div>
+        <div class="nav-left" onclick="leftClick()"></div>
+        <div class="nav-right" onclick="rightClick()"></div>
+        <div class="nav-center" onclick="centerClick()"></div>
     </div>
     <div id="page-button" style="display: flex" class="footer-controls">
         <div class="d-flex gap-3 align-items-center">
-            <button class="btn btn-primary" onclick="prevPage()">上一页</button>
+            <button class="btn btn-primary" onclick="showSettings()">设置</button>
             <div class="page-selector">
                 <select class="form-select" id="pageJump" style="min-width: 80px;" onchange="loadSelectedPage()">
                 </select>
             </div>
-            <button class="btn btn-primary" onclick="nextPage()">下一页</button>
+            <button class="btn btn-primary" onclick="exit()">退出</button>
+        </div>
+    </div>
+
+    <!-- 设置界面 Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="settingsModalLabel">设置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="settingsForm">
+                        <!-- 背景颜色设置 -->
+                        <div class="mb-3">
+                            <label class="form-label">背景颜色：</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bgColor" id="bgWhite"
+                                        value="white" checked>
+                                    <label class="form-check-label" for="bgWhite">白色</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bgColor" id="bgBlack"
+                                        value="black">
+                                    <label class="form-check-label" for="bgBlack">黑色</label>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 翻页方向设置 -->
+                        <div class="mb-3">
+                            <label class="form-label">翻页方式：</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="pageDir" id="dirLeftRight"
+                                        value="left-right" checked>
+                                    <label class="form-check-label" for="dirLeftRight">从左到右</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="pageDir" id="dirRightLeft"
+                                        value="right-left">
+                                    <label class="form-check-label" for="dirRightLeft">从右到左</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSettings()">保存</button>
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -41,6 +93,7 @@
 {% block scripts %}
 {% if title %}
 <script>
+    let l2r_read = true;
     async function loadImage(num) {
         if (loading.includes(num)) {
             return;
@@ -73,6 +126,20 @@
         const selectedPage = selectElement.selectedIndex;
         loadPage(selectedPage);
     }
+    function leftClick() {
+        if (l2r_read) {
+            prevPage();
+        } else {
+            nextPage();
+        }
+    }
+    function rightClick() {
+        if (l2r_read) {
+            nextPage();
+        } else {
+            prevPage();
+        }
+    }
     function prevPage() {
         if (currentPage > 0) {
             loadPage(currentPage - 1);
@@ -83,7 +150,7 @@
             loadPage(currentPage + 1);
         }
     }
-    function showMenu() {
+    function centerClick() {
         const header = document.getElementById("title-header");
         if (header.style.display == "block") {
             header.style.display = "none";
@@ -93,6 +160,40 @@
             document.getElementById("page-button").style.display = "flex";
         }
     }
+    function applySettings(color, dir) {
+        if (color == "white") {
+            document.getElementById("reader-container").style = "background: #fff;";
+        } else {
+            document.getElementById("reader-container").style = "background: #000;";
+        }
+        if (dir == "right-left") {
+            l2r_read = false;
+        } else {
+            l2r_read = true;
+        }
+    }
+    function saveSettings() {
+        const bgColor = document.querySelector('input[name="bgColor"]:checked').value;
+        const pageDir = document.querySelector('input[name="pageDir"]:checked').value;
+        // 存储到本地
+        localStorage.setItem('bgColor', bgColor);
+        localStorage.setItem('pageDir', pageDir);
+        applySettings(bgColor, pageDir);
+        //关闭窗口
+        const modal = bootstrap.Modal.getInstance(document.getElementById("settingsModal"));
+        modal.hide();
+    }
+    function showSettings() {
+        const bgColor = localStorage.getItem('bgColor') || 'white';
+        const pageDir = localStorage.getItem('pageDir') || 'left-right';
+        document.querySelector(`input[value="${bgColor}"]`).checked = true;
+        document.querySelector(`input[value="${pageDir}"]`).checked = true;
+        const modal = new bootstrap.Modal(document.getElementById("settingsModal"));
+        modal.show();
+    }
+    function exit() {
+        window.close()
+    }
 </script>
 <script>
     const loading = []
@@ -100,6 +201,11 @@
     var currentPage = 0;
     //初始化
     $(document).ready(async function () {
+        const bgColor = localStorage.getItem('bgColor') || 'white';
+        const pageDir = localStorage.getItem('pageDir') || 'left-right';
+        document.querySelector(`input[value="${bgColor}"]`).checked = true;
+        document.querySelector(`input[value="${pageDir}"]`).checked = true;
+        applySettings(bgColor, pageDir);
         document.getElementsByClassName("container")[0].classList = [];
         const id = window.location.href.split("/").slice(-1)[0];
         images = await getPages(id);
@@ -113,7 +219,7 @@
         document.getElementById("comic-pages").innerHTML += html2;
         document.getElementById("page_0").style = "height:40px;width:40px;";
         loadPage(0);
-        showMenu();
+        centerClick();
     });
 </script>
 {% endif %}

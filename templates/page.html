@@ -10,23 +10,23 @@
 
 {% block main %}
 <div class="row g-2 mb-3">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg-2">
         <select id="sort" class="form-select">
             <option value="0" selected>正序</option>
             <option value="1">倒序</option>
         </select>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg-2">
         <select id="source" class="form-select">
             <option value="" selected>所有源</option>
         </select>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4 col-lg-2">
         <select id="group" class="form-select">
             <option value="" selected>所有分组</option>
         </select>
     </div>
-    <div class="col-12 col-md-3">
+    <div class="col-12 col-md-12 col-lg-6">
         <div class="input-group position-relative">
             <input type="text" id="search" class="form-control" placeholder="搜索" onkeydown="handleSuggestions(event)">
             <button class="btn btn-secondary" onclick="loadDatas(true)">随机</button>
@@ -169,7 +169,16 @@
         if (random) {
             //随机
             document.getElementById("page_button").style = "display: none;";
-            doujinshiDatas = await getRandomDatas(4);
+            let randomNum = localStorage.getItem("randomNum");
+            try {
+                randomNum = parseInt(randomNum);
+                if (isNaN(randomNum)) {
+                    randomNum = 4;
+                }
+            } catch (e) {
+                randomNum = 4;
+            }
+            doujinshiDatas = await getRandomDatas(randomNum);
         } else {
             document.getElementById("page_button").style = "";
             // 获取当前查询信息

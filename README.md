@@ -1,7 +1,5 @@
 # DoujinshiPy
 
-多合一本子库
-
 ## 安装
 
 **需要先安装unrar和redis**

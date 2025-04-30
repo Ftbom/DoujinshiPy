@@ -54,6 +54,10 @@ def group():
 def other():
     return render_template("other.html")
 
+@flask_app.route("/offline")
+def offline():
+    return render_template("offline.html")
+
 @flask_app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":

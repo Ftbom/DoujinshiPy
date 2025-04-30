@@ -192,11 +192,17 @@ def get_add_status(token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     client = app_state["redis_client"]
     add_status = client.get("add_status")
+    add_progress = client.get("add_progress")
     if add_status == None:
         add_status = "none"
+    if add_progress != None:
+        add_progress = float(add_progress)
+    else:
+        add_progress = 0
     if add_status == "finished":
         client.delete("add_status")
-    return {"msg": add_status}
+        client.delete("add_progress")
+    return {"msg": add_status, "progress": add_progress}
 
 @app.post("/batch")
 def batch_operation(setting: BatchOperation, token: str = Depends(oauth2)) -> dict:
@@ -236,11 +242,17 @@ def get_batch_operation_status(token: str = Depends(oauth2)) -> dict:
     verify_token(token)
     client = app_state["redis_client"]
     operation_status = client.get("batch_operation")
+    operation_progress = client.get("batch_progress")
     if operation_status == None:
         operation_status = "none"
+    if operation_progress == None:
+        operation_progress = 0
+    else:
+        operation_progress = float(operation_progress)
     if operation_status == "finished":
         client.delete("batch_operation")
-    return {"msg": operation_status}
+        client.delete("batch_progress")
+    return {"msg": operation_status, "progress": operation_progress}
 
 @app.get("/tags/{tagtype}")
 def get_all_tags(tagtype: TagType, token: str = Depends(oauth2)) -> dict:

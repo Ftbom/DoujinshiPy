@@ -14,23 +14,23 @@
 
 {% block main %}
 <div class="row g-2 mb-3">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg-2">
         <select id="sort" class="form-select">
             <option value="0" selected>正序</option>
             <option value="1">倒序</option>
         </select>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg-2">
         <select id="source" class="form-select">
             <option value="" selected>所有源</option>
         </select>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4 col-lg-2">
         <select id="group" class="form-select">
             <option value="" selected>所有分组</option>
         </select>
     </div>
-    <div class="col-12 col-md-3">
+    <div class="col-12 col-md-12 col-lg-6">
         <div class="input-group position-relative">
             <input type="text" id="search" class="form-control" placeholder="搜索" onkeydown="handleSuggestions(event)">
             <button class="btn btn-primary" onclick="search()">
@@ -62,8 +62,12 @@
 <div style="display: flex; justify-content: center;">
     <button id="load-more" class="btn btn-primary mt-3" onclick="loadMoreData()" style="width: 200px;">加载更多</button>
 </div>
-<div id="progress" style="margin-top: 10px;">
+<div id="progress" style="margin-top: 10px; display: none;">
     <p id="progress-text" class="progress-text"></p>
+    <div class="progress">
+        <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"
+            aria-valuenow="0"aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
 </div>
 <div class="row g-2 mt-4">
     <div class="col-12 col-md-4">
@@ -214,15 +218,31 @@
     });
 </script>
 <script>
-    let progressText = document.getElementById('progress-text');
+    let progressElement = document.getElementById("progress");
+    let progressText = document.getElementById("progress-text");
+    let progressBar = document.getElementById("progress-bar")
 
     function handleProgress(url) {
         // 每秒查询进度
         let interval = setInterval(async function () {
             let result = await getProgress(url); //查询进度信息
             //更新进度信息
+            const progress_rate = (result[2] * 100).toFixed(2) + "%";
             progressText.innerText = result[1];
+            progressBar.style.width = progress_rate;
+            progressBar.setAttribute("aria-valuenow", progress_rate);
+            progressBar.innerText = progress_rate;
             if (result[0]) {
+                if (!update_groups) {
+                    setTimeout(() => {
+                        //清空进度条
+                        progressBar.style.width = "0%";
+                        progressBar.setAttribute("aria-valuenow", "0%");
+                        progressBar.innerHTML = "0%";
+                        progressElement.style.display = "none";
+                        progressText.innerText = "";
+                    }, 3000);
+                }
                 clearInterval(interval); // 达到100%时停止更新
                 startBatch = false; //清空操作标志位
                 setTimeout(() => {
@@ -419,6 +439,7 @@
         }
         setBatch(batch_type, batch_value, inputs); //开始批量操作
         startBatch = true; //设置标志位
+        progressElement.style.display = "block";
         handleProgress("/batch"); //显示进度条
     }
 </script>

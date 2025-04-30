@@ -25,7 +25,9 @@ async function getTags(type) {
 
 async function getProgress(url) {
     if (rm_group) {
-        return [(rm_group_progress[0] == rm_group_progress[1]), `removing groups ${rm_group_progress[0]}/${rm_group_progress[1]}`];
+        return [(rm_group_progress[0] == rm_group_progress[1]),
+        `removing groups ${rm_group_progress[0]}/${rm_group_progress[1]}`,
+        rm_group_progress[0] / rm_group_progress[1]];
     }
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     let result = JSON.parse(await res.text());
@@ -33,7 +35,7 @@ async function getProgress(url) {
     if ((result.msg == "none") || (result.msg == "finished") || (result.msg == "scanning has not started")) {
         finished = true;
     }
-    return [finished, result.msg];
+    return [finished, result.msg, result.progress];
 }
 
 function parseDatas(datas) {
@@ -76,6 +78,9 @@ async function setBatch(type, value, datas) {
         rm_group_progress[0] = 0;
         rm_group_progress[1] = datas.length;
         for (let data of datas) {
+            if (data.length > 1) {
+                data = data[0];
+            }
             await fetch(`/group/${value}/${data}`, {
                 method: "DELETE",
                 headers: { Authorization: "Bearer " + token}});

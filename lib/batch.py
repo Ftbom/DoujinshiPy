@@ -32,6 +32,7 @@ def batch_set_group(app_state, group_name: str, id_list: list[str], replace_old:
         else:
             logging.info(f"set group for {id}")
         client.set("batch_operation", f"finish setting group {count}/{num}")
+        client.set("batch_progress", count/num)
     client.set("batch_operation", "finished")
 
 def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func, thumbnail: bool = False) -> None:
@@ -83,6 +84,7 @@ def batch_get_cover(app_state, id_list: list[str], replace_old: bool, func, thum
                     pass
             logging.error(f"failed to get cover {id}.jpg, error message: {e}")
         client.set("batch_operation", f"finish getting cover {count}/{num}")
+        client.set("batch_progress", count/num)
     client.set("batch_operation", "finished")
 
 def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> None:
@@ -116,5 +118,6 @@ def batch_get_tag(app_state, id_list: list[str], replace_old: bool, func) -> Non
             except:
                 logging.error(f"failed to get tag for {id}")
         client.set("batch_operation", f"finish getting tag {count}/{num}")
+        client.set("batch_progress", count/num)
     client.set("batch_operation", "finished")
         

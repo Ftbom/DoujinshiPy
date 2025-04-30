@@ -514,7 +514,6 @@ td {
     to { transform: rotate(360deg); }
 }
 
-
 @media (max-width: 767px) {
     .form-select, .form-control {
         font-size: 14px;
