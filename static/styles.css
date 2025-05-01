@@ -243,6 +243,7 @@ td {
     color: #1c1d1e;
     cursor: pointer;
     overflow-wrap: break-word;
+    word-break: break-all; /* 强制长单词换行 */
     /* 允许文本溢出 */
     display: -webkit-box; /* 必须使用这个来启用多行截断 */
     -webkit-line-clamp: 2; /* 显示最多两行 */
