@@ -208,19 +208,23 @@ td {
 
 .comic-item {
     position: relative;
-    height: 350px;
+    height: 340px;
     width: 220px;
     text-align: center;
-    margin-bottom: 10px;
-    margin-top: 10px;
+    margin-top: 5px;
+    /* 确保 .comic-item 是一个 flex 容器 */
+    display: flex;
+    flex-direction: column; /* 子元素垂直排列 */
+    justify-content: center; /* 垂直方向居中 */
+    align-items: center; /* 水平方向居中 */
 }
 
 .comic-cover {
     height: 280px;
     width: 210px;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: center; /* 水平方向居中 .comic-cover 内部内容 */
+    align-items: center; /* 垂直方向居中 .comic-cover 内部内容 */
 }
 
 .comic-item img {
@@ -239,16 +243,22 @@ td {
     color: #1c1d1e;
     cursor: pointer;
     overflow-wrap: break-word;
+    /* 允许文本溢出 */
+    display: -webkit-box; /* 必须使用这个来启用多行截断 */
+    -webkit-line-clamp: 2; /* 显示最多两行 */
+    -webkit-box-orient: vertical; /* 设置垂直方向 */
+    overflow: hidden; /* 超出部分隐藏 */
+    text-overflow: ellipsis; /* 省略号 */
 }
 
 .comic-item .info-popup {
     display: none;
     position: absolute;
-    top: 40%;
-    left: 48%;
+    top: 43%;
+    left: 50%;
     transform: translate(-50%, -50%);
     width: 200px;
-    height: 300px;
+    height: 320px;
     background-color: white;
     border: 1px solid #ccc;
     border-radius: 8px;
@@ -534,5 +544,22 @@ td {
     .page-selector select {
         min-width: 120px;
         max-width: 200px;
+    }
+}
+
+@media (max-width: 780px) and (min-width: 460px) {
+    .comic-item {
+        height: 300px;
+        width: 180px;
+    }
+    .comic-cover {
+        height: 240px;
+        width: 180px;
+    }
+    .comic-item .info-popup {
+        top: 43%;
+        left: 50%;
+        width: 170px;
+        height: 290px;
     }
 }
