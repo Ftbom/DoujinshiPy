@@ -547,19 +547,19 @@ td {
     }
 }
 
-@media (max-width: 780px) and (min-width: 460px) {
+@media (max-width: 780px) and (min-width: 448px) {
     .comic-item {
-        height: 300px;
-        width: 180px;
+        height: 292px;
+        width: 174px;
     }
     .comic-cover {
-        height: 240px;
-        width: 180px;
+        height: 232px;
+        width: 174px;
     }
     .comic-item .info-popup {
-        top: 43%;
+        top: 42%;
         left: 50%;
-        width: 170px;
-        height: 290px;
+        width: 164px;
+        height: 280px;
     }
 }
