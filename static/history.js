@@ -1,3 +1,13 @@
+/*
+创建表：
+CREATE TABLE public.doujinshis (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  page int NOT NULL,
+  time int NOT NULL
+);
+*/
+
 const PAGE_SIZE = 10;
 const IMAGE_BASE = '/doujinshi/$id/thumbnail';
 
@@ -230,7 +240,10 @@ function showFloatingBtn() {
             return 0;
         }
         window.addEventListener('beforeunload', () => {
-            const page_num = document.getElementById('pageJump').value;
+            let page_num = document.getElementById('pageJump').value;
+            if (page_num === "") {
+                page_num = 1;
+            }
             localStorage.setItem('readProgress', `${id}|$|${title}|$|${page_num}`);
         });
         return 0;
