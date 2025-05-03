@@ -199,6 +199,7 @@
     const loading = []
     var images = null;
     var currentPage = 0;
+    const id = window.location.href.split("/").slice(-1)[0];
     //初始化
     $(document).ready(async function () {
         const bgColor = localStorage.getItem('bgColor') || 'white';
@@ -207,7 +208,6 @@
         document.querySelector(`input[value="${pageDir}"]`).checked = true;
         applySettings(bgColor, pageDir);
         document.getElementsByClassName("container")[0].classList = [];
-        const id = window.location.href.split("/").slice(-1)[0];
         images = await getPages(id);
         let html = "";
         let html2 = "";
@@ -218,7 +218,7 @@
         document.getElementById("pageJump").innerHTML = html;
         document.getElementById("comic-pages").innerHTML += html2;
         document.getElementById("page_0").style = "height:40px;width:40px;";
-        const last_page = localStorage.getItem("lastReadPage");
+        const last_page = localStorage.getItem(id + "_lastReadPage");
         if (last_page == null) {
             loadPage(0);
         } else {
@@ -227,7 +227,7 @@
         centerClick();
     });
     window.addEventListener("unload", () => {
-        localStorage.setItem("lastReadPage", document.getElementById("pageJump").value);
+        localStorage.setItem(id + "_lastReadPage", document.getElementById("pageJump").value);
     });
 </script>
 {% endif %}
