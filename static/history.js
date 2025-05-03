@@ -13,7 +13,7 @@ const IMAGE_BASE = '/doujinshi/$id/thumbnail';
 
 //系统变量
 let page = 0;
-let loading = false;
+let loading_list = false;
 let hasMore = true;
 const loadImgs = [];
 let loadingImg = false;
@@ -209,7 +209,7 @@ if (showFloatingBtn()) {
     });
     //翻页
     panel.addEventListener('scroll', () => {
-        if (!loading && hasMore) {
+        if (!loading_list && hasMore) {
             const {
                 scrollTop,
                 scrollHeight,
@@ -264,7 +264,7 @@ function refreshList() {
 //加载更多
 async function loadMore() {
     //加载中界面
-    loading = true;
+    loading_list = true;
     const loader = document.createElement('div');
     loader.className = 'tm-loading';
     loader.textContent = '加载中...';
@@ -297,7 +297,7 @@ async function loadMore() {
         alert('请求出错');
     }
     loader.remove();
-    loading = false;
+    loading_list = false;
 }
 
 //添加项到界面
