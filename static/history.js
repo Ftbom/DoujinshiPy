@@ -306,16 +306,15 @@ function appendItems(items) {
         const el = document.createElement('div');
         el.className = 'tm-list-item';
         el.innerHTML = `
+                <a href="/web/read/${item.id}?page=${item.page}">
                 <img id="history_${item.id}" src="/web/static/loading.gif" alt="${item.title}">
+                </a>
                 <div class="title">${item.title}</div>
                 <button class="btn-del">删除</button>
             `;
         loadImgs.unshift(item.id);
         el.querySelector('.btn-del').addEventListener('click', () => {
             deleteItemFromDB(item.id, () => el.remove());
-        });
-        el.querySelector('img').addEventListener('click', () => {
-            window.open(`/web/read/${item.id}/${item.page}`, '_blank');
         });
         panel.appendChild(el);
     });

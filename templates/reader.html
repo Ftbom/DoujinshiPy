@@ -116,7 +116,6 @@
     }
     function loadPage(selectedPage) {
         PreloadImages(selectedPage);
-        history.pushState(null, "", `/web/read/${id}/${selectedPage + 1}`);
         document.getElementById("pageJump").value = selectedPage + 1;
         document.getElementById(`page_${currentPage}`).style.display = "none";
         currentPage = selectedPage;
@@ -193,7 +192,7 @@
         modal.show();
     }
     function exit() {
-        window.close()
+        window.history.back();
     }
 </script>
 <script>
@@ -202,13 +201,12 @@
     var currentPage = 0;
     var id = null;
     var init_page = null;
-    const path_strs = window.location.href.split("/").slice(-2);
-    if (path_strs[0] == "read") {
-        id = path_strs[1];
+    const id = window.location.pathname.split("/").slice(-1)[0];
+    let init_page = new URLSearchParams(window.location.search).get("page");
+    if (init_page == null) {
         init_page = 1;
     } else {
-        id = path_strs[0];
-        init_page = path_strs[1];
+        init_page = parseInt(init_page);
     }
     //初始化
     $(document).ready(async function () {

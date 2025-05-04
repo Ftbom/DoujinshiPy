@@ -2,6 +2,7 @@
     "name": "DoujinshiPy WEB",
     "short_name": "DoujinshiPy",
     "start_url": "/web/page",
+    "scope": "/web/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#000000",

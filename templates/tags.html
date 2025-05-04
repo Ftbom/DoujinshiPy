@@ -34,7 +34,9 @@
             if (tag_names.length > 1) {
                 name = tag_names[1];
             }
-            tag_html += `<span class="tag-list-badge ${type}-tag-badge" onclick="search_tag('${tag_key}')">${name} (${tag.itemCount})</span>`;
+            tag_html += `<a href="/web/page?query=${tag_key}">
+                <span class="tag-list-badge ${type}-tag-badge">${name} (${tag.itemCount})</span>
+                </a>`;
         }
         return `<div class="section">
       <div class="title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
@@ -70,10 +72,6 @@
             + parody_html + character_html + group_html + artist_html + cosplayer_html + male_html + female_html
             + mixed_html + other_html + '</div>';
         document.getElementById("loading-tags").style.display = "none";
-    }
-    function search_tag(tag) {
-        localStorage.setItem("filter_tag", tag);
-        window.open("{{ url_for('page') }}", '_blank');
     }
 </script>
 {% endblock %}

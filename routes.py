@@ -34,9 +34,8 @@ def tags():
     return render_template("tags.html")
 
 @flask_app.route("/read/<path:id>")
-@flask_app.route("/read/<path:id>/<int:page>")
 @login_required
-def read(id, page = 1):
+def read(id):
     title = app_state["redis_client"].hget(f"doujinshi:{id}", "title")
     return render_template("reader.html", title = title)
 
