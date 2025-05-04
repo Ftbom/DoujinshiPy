@@ -232,8 +232,8 @@ function showFloatingBtn() {
             return 0;
         }
         //替换原loadPage函数
-        const OriginloadPage = loadPage;
-        const loadPage = function (selected) {
+        const OriginloadPage = window.loadPage;
+        window.loadPage = function (selected) {
             OriginloadPage(selected);
             localStorage.setItem('readProgress', `${reader_id}|$|${reader_title}|$|${selected + 1}`);
             if (debounceTimer){
