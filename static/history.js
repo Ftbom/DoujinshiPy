@@ -231,16 +231,18 @@ function showFloatingBtn() {
         if (!config.POSTGREST_URL || !config.POSTGREST_API_KEY || !config.TABLE_NAME) {
             return 0;
         }
-        document.getElementById('pageJump').addEventListener('change', function (event) {
-            const selected = event.target.value;
-            localStorage.setItem('readProgress', `${reader_id}|$|${reader_title}|$|${selected}`);
+        //替换原loadPage函数
+        const OriginloadPage = loadPage;
+        const loadPage = function (selected) {
+            OriginloadPage(selected);
+            localStorage.setItem('readProgress', `${reader_id}|$|${reader_title}|$|${selected + 1}`);
             if (debounceTimer){
                 clearTimeout(debounceTimer);
             }
             debounceTimer = setTimeout(() => {
                 saveReadProgress();
-            }, 1000); // 1秒后才发请求
-        });
+            }, 1500); //1.5秒后才发请求
+        };
         return 0;
     }
     return 1;
