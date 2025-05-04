@@ -33,35 +33,33 @@ body {
 }
 
 .tag-list-badge-wrapper {
-    max-height: 150px;
-    overflow-y: auto;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;   /* 水平居中 */
+  gap: 10px;
+  padding: 20px;
+  margin: 0 auto;            /* 容器本身居中 */
 }
 
 .tag-list-badge {
     display: inline-block;
-    color: #fff;
     padding: 5px 10px;
     border-radius: 15px;
-    font-size: 12px;
-    margin: 2px;
+    font-size: var(--fontsize, 1em);
     cursor: pointer;
 }
 
-.category-tag-badge  { background-color: #e53819; }
-.language-tag-badge  { background-color: #e55d19; }
-.parody-tag-badge    { background-color: #e5b219; }
-.character-tag-badge { background-color: #60e519; }
-.group-tag-badge     { background-color: #19e54c; }
-.artist-tag-badge    { background-color: #19e5b2; }
-.cosplayer-tag-badge { background-color: #19b2e5; }
-.male-tag-badge      { background-color: #194ce5; }
-.female-tag-badge    { background-color: #4c19e5; }
-.mixed-tag-badge     { background-color: #b219e5; }
-.other-tag-badge     { background-color: #e519b2; }
+.category-tag-badge  { background: #EC2B24; color: #FFF3E0; }
+.cosplayer-tag-badge { background: #FB8B05; color: #FFEBEE; }
+.language-tag-badge  { background: #EF6C00; color: #FFF3E0; }
+.parody-tag-badge    { background: #FDD835; color: #5D4037; }
+.character-tag-badge { background: #2E7D32; color: #C8E6C9; }
+.group-tag-badge     { background: #00838F; color: #E0F7FA; }
+.artist-tag-badge    { background: #61649F; color: #E1BEE7; }
+.male-tag-badge      { background: #1565C0; color: #BBDEFB; }
+.female-tag-badge    { background: #C2185B; color: #F8BBD0; }
+.mixed-tag-badge     { background: #8E24AA; color: #D1C4E9; }
+.other-tag-badge     { background: #757575; color: #F5F5F5; }
 
 .tag-badge {
     display: inline-block;

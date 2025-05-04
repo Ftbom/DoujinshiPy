@@ -35,14 +35,16 @@
                 name = tag_names[1];
             }
             tag_html += `<a href="/web/page?query=${tag_key}">
-                <span class="tag-list-badge ${type}-tag-badge">${name} (${tag.itemCount})</span>
+                <span class="tag-list-badge ${type}-tag-badge" data-count="${tag.itemCount}">${name} (${tag.itemCount})</span>
                 </a>`;
         }
         return `<div class="section">
-      <div class="title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+      <details>
+      <summary class="title">${type.charAt(0).toUpperCase() + type.slice(1)}</summary>
       <div class="tag-list-badge-wrapper">
         ${tag_html}
       </div>
+      </details>
     </div>`;
     }
     async function loadTags() {
@@ -72,6 +74,29 @@
             + parody_html + character_html + group_html + artist_html + cosplayer_html + male_html + female_html
             + mixed_html + other_html + '</div>';
         document.getElementById("loading-tags").style.display = "none";
+        setTagsStyle("category-tag-badge");
+        setTagsStyle("language-tag-badge");
+        setTagsStyle("parody-tag-badge");
+        setTagsStyle("character-tag-badge");
+        setTagsStyle("group-tag-badge");
+        setTagsStyle("artist-tag-badge");
+        setTagsStyle("cosplayer-tag-badge");
+        setTagsStyle("male-tag-badge");
+        setTagsStyle("female-tag-badge");
+        setTagsStyle("mixed-tag-badge");
+        setTagsStyle("other-tag-badge");
+    }
+    function setTagsStyle(class_name) {
+        const badges = document.querySelectorAll("." + name);
+        let counts = Array.from(badges).map(b => parseInt(b.dataset.count));
+        let min = Math.min(...counts);
+        let max = Math.max(...counts);
+        badges.forEach(badge => {
+            const count = parseInt(badge.dataset.count);
+            const ratio = (count - min) / (max - min || 1); // 防止除0    
+            const fontSize = 0.9 + ratio * 0.6; // 字体从0.9em到1.5em
+            badge.style.setProperty('--fontsize', `${fontSize}em`);
+        });
     }
 </script>
 {% endblock %}
