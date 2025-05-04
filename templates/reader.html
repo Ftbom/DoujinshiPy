@@ -31,7 +31,7 @@
                 <select class="form-select" id="pageJump" style="min-width: 80px;" onchange="loadSelectedPage()">
                 </select>
             </div>
-            <button class="btn btn-primary" onclick="exit()">退出</button>
+            <button class="btn btn-primary" onclick="exit()">返回</button>
         </div>
     </div>
 
@@ -199,10 +199,8 @@
     const loading = []
     var images = null;
     var currentPage = 0;
-    var id = null;
-    var init_page = null;
     const id = window.location.pathname.split("/").slice(-1)[0];
-    let init_page = new URLSearchParams(window.location.search).get("page");
+    var init_page = new URLSearchParams(window.location.search).get("page");
     if (init_page == null) {
         init_page = 1;
     } else {
