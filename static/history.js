@@ -17,6 +17,10 @@ let loading_list = false;
 let hasMore = true;
 const loadImgs = [];
 let loadingImg = false;
+//阅读界面变量
+let reader_id = null;
+let reader_title = null;
+let debounceTimer = null;
 //配置
 let config = {
     POSTGREST_URL: localStorage.getItem('POSTGREST_URL'),
@@ -29,16 +33,10 @@ const btn = document.createElement('div');
 const panel = document.createElement('div');
 const configPanel = document.createElement('div');
 
+let has_loaded_history = false;
+saveReadProgress();
+
 if (showFloatingBtn()) {
-    window.addEventListener('storage', (event) => {
-        if (event.key === 'readProgress') {
-            if (event.newValue != null) {
-                const [id_, title_, page_] = event.newValue.split("|$|");
-                AddItemToDB(id_, title_, page_);
-                localStorage.removeItem('readProgress');
-            }
-        }
-    });
     //css
     css_style.innerHTML = `
         #tm_floating_btn {
@@ -225,30 +223,42 @@ if (showFloatingBtn()) {
 function showFloatingBtn() {
     const path_name = window.location.pathname;
     if (path_name.startsWith("/web/read")) {
-        let id = null;
-        const title = document.getElementById("title-header").textContent.replaceAll("\n", "").trim();
-        if (title.search("Doujinshi不存在") != -1) {
+        reader_id = path_name.split("/").slice(-1)[0];
+        reader_title = document.getElementById("title-header").textContent.replaceAll("\n", "").trim();
+        if (reader_title.search("Doujinshi不存在") != -1) {
             return 0;
-        }
-        const path_strs = window.location.href.split("/").slice(-2);
-        if (path_strs[0] == "read") {
-            id = path_strs[1];
-        } else {
-            id = path_strs[0];
         }
         if (!config.POSTGREST_URL || !config.POSTGREST_API_KEY || !config.TABLE_NAME) {
             return 0;
         }
-        window.addEventListener('beforeunload', () => {
-            let page_num = document.getElementById('pageJump').value;
-            if (page_num === "") {
-                page_num = 1;
+        document.getElementById('pageJump').addEventListener('change', function (event) {
+            const selected = event.target.value;
+            localStorage.setItem('readProgress', `${reader_id}|$|${reader_title}|$|${selected}`);
+            if (debounceTimer){
+                clearTimeout(debounceTimer);
             }
-            localStorage.setItem('readProgress', `${id}|$|${title}|$|${page_num}`);
+            debounceTimer = setTimeout(() => {
+                saveReadProgress();
+            }, 1000); // 1秒后才发请求
         });
         return 0;
     }
     return 1;
+}
+
+//保存进度
+async function saveReadProgress() {
+    const read_progress = localStorage.getItem('readProgress');
+    if (read_progress === null) {
+        return;
+    }
+    const [id_, title_, page_] = read_progress.split("|$|");
+    localStorage.removeItem('readProgress');
+    await AddItemToDB(id_, title_, page_);
+    if (has_loaded_history) {
+        refreshList();
+    }
+    return;
 }
 
 //刷新列表
@@ -263,6 +273,7 @@ function refreshList() {
 
 //加载更多
 async function loadMore() {
+    has_loaded_history = true;
     //加载中界面
     loading_list = true;
     const loader = document.createElement('div');
