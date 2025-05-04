@@ -87,13 +87,13 @@
         setTagsStyle("other-tag-badge");
     }
     function setTagsStyle(class_name) {
-        const badges = document.querySelectorAll("." + name);
-        let counts = Array.from(badges).map(b => parseInt(b.dataset.count));
-        let min = Math.min(...counts);
-        let max = Math.max(...counts);
+        const badges = document.querySelectorAll("." + class_name);
+        let counts = new Set(Array.from(badges).map(b => parseInt(b.dataset.count)));
+        counts = Array.from(counts);
+        counts.sort((a, b) => a - b);
         badges.forEach(badge => {
             const count = parseInt(badge.dataset.count);
-            const ratio = (count - min) / (max - min || 1); // 防止除0    
+            const ratio = counts.indexOf(count) / Math.max((counts.length - 1), 1); // 防止除0    
             const fontSize = 0.9 + ratio * 0.6; // 字体从0.9em到1.5em
             badge.style.setProperty('--fontsize', `${fontSize}em`);
         });
