@@ -78,10 +78,7 @@ async function setBatch(type, value, datas) {
         rm_group_progress[0] = 0;
         rm_group_progress[1] = datas.length;
         for (let data of datas) {
-            if (data.length > 1) {
-                data = data[0];
-            }
-            await fetch(`/group/${value}/${data}`, {
+            await fetch(`/group/${value}/${data[0]}`, {
                 method: "DELETE",
                 headers: { Authorization: "Bearer " + token}});
             await new Promise((resolve) => setTimeout(resolve, 500));
