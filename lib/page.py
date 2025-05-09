@@ -10,6 +10,11 @@ import requests
 import remotezip
 from lib.utils import Doujinshi, SourceType, doujinshi_from_json, set_pagecount_of_doujinshi
 
+IMAGE_EXTS = (
+    '.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.tif',
+    '.webp', '.ico', '.heic', '.avif', '.svg'
+)
+
 def archive_filelist(archive_file, sort: bool, file_type: str) -> list:
     filelist = archive_file.namelist()
     if sort:
@@ -19,9 +24,13 @@ def archive_filelist(archive_file, sort: bool, file_type: str) -> list:
         for file in archive_file.infolist():
             if file.is_dir():
                 filelist.remove(file.filename)
+            if not file.filename.lower().endswith(IMAGE_EXTS):
+                filelist.remove(file.filename)
     elif file_type == "7z":
         for file in archive_file.files:
             if file.is_directory:
+                filelist.remove(file.filename)
+            if not file.filename.lower().endswith(IMAGE_EXTS):
                 filelist.remove(file.filename)
     return filelist
 
