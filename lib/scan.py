@@ -47,16 +47,17 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
     client.set("add_status", "finished")
 
 def clean_database_by_source_name(client, name: str, doujinshi_list: list) -> list:
-    for i in range(len(doujinshi_list)):
-        f_name, ext = os.path.splitext(str(doujinshi_list[i][0]))
-        doujinshi_list[i] = (f_name, str(doujinshi_list[i][1]))
+    doujinshi_data = {}
+    for i in doujinshi_list:
+        f_name, ext = os.path.splitext(str(i[0]))
+        doujinshi_data[str(i[1])] = f_name
     dids = get_all_values_from_list(client, "data:doujinshis")
     for did in dids:
         json_data = client.hgetall(f"doujinshi:{did}")
         if json_data["source"] == name:
             info = (json_data["title"], json_data["identifier"])
-            if info in doujinshi_list:
-                doujinshi_list.remove(info) # 已存在，跳过
+            if json_data["identifier"] in doujinshi_data:
+                del doujinshi_data[json_data["identifier"]] # 已存在，跳过
             else:
                 # 移除不存在的数据及封面
                 if os.path.exists(f".data/thumb/{str(did)}.jpg"): # 移除封面
@@ -90,10 +91,10 @@ def scan_to_database(app_state, name: str) -> None:
             if not ext in [".zip", ".ZIP", ".7z", ".7Z", ".rar", ".RAR"]:
                 doujinshi_list.remove(doujinshi_info)
     doujinshi_list = clean_database_by_source_name(client, name, doujinshi_list)
-    for d in doujinshi_list:
-        doujinshi = Doujinshi(title = d[0], identifier = d[1],
+    for d in doujinshi_list.keys():
+        doujinshi = Doujinshi(title = doujinshi_list[d], identifier = d,
                               type = source_object.TYPE, source = name)
         add_doujinshi_to_redis(client, doujinshi)
-        logging.info(f"add {d[0]}")
+        logging.info(f"add {doujinshi_list[d]}")
     client.set("scan_status_code", 3)
     logging.info(f"the {name} library has been scanned")
