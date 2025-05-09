@@ -46,10 +46,16 @@ def batch_add_to_library(app_state, id_list: list[str], source_name: str, is_rep
         client.set("add_progress", count/num)
     client.set("add_status", "finished")
 
-def clean_database_by_source_name(client, name: str, doujinshi_list: list) -> list:
+def clean_database_by_source_name(client, name: str, doujinshi_list: list, source_type: SourceType) -> list:
     doujinshi_data = {}
     for i in doujinshi_list:
         f_name, ext = os.path.splitext(str(i[0]))
+        if source_type == SourceType.cloud or source_type == SourceType.cloud_encrypted:
+            if not ext in [".zip", ".ZIP"]: # 筛选文件类型
+                continue
+        elif source_type == SourceType.local:
+            if not ext in [".zip", ".ZIP", ".7z", ".7Z", ".rar", ".RAR"]:
+                continue
         doujinshi_data[str(i[1])] = f_name
     dids = get_all_values_from_list(client, "data:doujinshis")
     for did in dids:
@@ -82,15 +88,7 @@ def scan_to_database(app_state, name: str) -> None:
     # 保存到数据库
     client.set("scan_status_code", 2)
     logging.info(f"clear the old datas from the {name} library")
-    for doujinshi_info in doujinshi_list:
-        _name, ext = os.path.splitext(str(doujinshi_info[0]))
-        if source_object.TYPE == SourceType.cloud or source_object.TYPE == SourceType.cloud_encrypted:
-            if not ext in [".zip", ".ZIP"]: # 筛选文件类型
-                doujinshi_list.remove(doujinshi_info)
-        elif source_object.TYPE == SourceType.local:
-            if not ext in [".zip", ".ZIP", ".7z", ".7Z", ".rar", ".RAR"]:
-                doujinshi_list.remove(doujinshi_info)
-    doujinshi_list = clean_database_by_source_name(client, name, doujinshi_list)
+    doujinshi_list = clean_database_by_source_name(client, name, doujinshi_list, source_object.TYPE)
     for d in doujinshi_list.keys():
         doujinshi = Doujinshi(title = doujinshi_list[d], identifier = d,
                               type = source_object.TYPE, source = name)
