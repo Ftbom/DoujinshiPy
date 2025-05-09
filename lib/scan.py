@@ -61,7 +61,6 @@ def clean_database_by_source_name(client, name: str, doujinshi_list: list, sourc
     for did in dids:
         json_data = client.hgetall(f"doujinshi:{did}")
         if json_data["source"] == name:
-            info = (json_data["title"], json_data["identifier"])
             if json_data["identifier"] in doujinshi_data:
                 del doujinshi_data[json_data["identifier"]] # 已存在，跳过
             else:
