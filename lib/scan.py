@@ -68,7 +68,7 @@ def clean_database_by_source_name(client, name: str, doujinshi_list: list, sourc
                 if os.path.exists(f".data/thumb/{str(did)}.jpg"): # 移除封面
                     os.remove(f".data/thumb/{str(did)}.jpg")
                 delete_doujinshi_from_redis(client, did, json_data["title"], json_data["groups"])
-    return doujinshi_list
+    return doujinshi_data
 
 def scan_to_database(app_state, name: str) -> None:
     source_object = app_state["sources"][name]
