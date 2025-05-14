@@ -28,19 +28,17 @@ let config = {
     TABLE_NAME: localStorage.getItem('TABLE_NAME'),
 };
 
-const css_style = document.createElement('style');
-const btn = document.createElement('div');
 const panel = document.createElement('div');
-const configPanel = document.createElement('div');
 
 let has_loaded_history = false;
 saveReadProgress();
 
 if (showFloatingBtn()) {
     //css
+	const css_style = document.createElement('style');
     css_style.innerHTML = `
         #tm_floating_btn {
-            position: fixed; right: 20px; bottom: 20px;
+            position: fixed; bottom: 20px;
             width: 50px; height: 50px;
             border-radius: 50%; background: #1e90ff;
             cursor: pointer; z-index: 9999;
@@ -119,13 +117,24 @@ if (showFloatingBtn()) {
     `;
     document.body.appendChild(css_style);
     //添加悬浮按钮
+	const back_btn = document.createElement('div');
+    back_btn.id = 'tm_floating_btn';
+	back_btn.style = 'left: 20px;';
+    back_btn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="margin:13px;">
+    <path d="M15 18l-6-6 6-6"
+	    stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+	back_btn.addEventListener('click', () => window.history.back());
+    document.body.appendChild(back_btn);
+	const btn = document.createElement('div');
     btn.id = 'tm_floating_btn';
+	btn.style = 'right: 20px;';
     btn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="margin:13px;">
     <path d="M12 8v5h4M12 2a10 10 0 1 0 10 10"
         stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
     document.body.appendChild(btn);
-    //配置界面
+    //列表
     panel.id = 'tm_list_panel';
     document.body.appendChild(panel);
     const topBar = document.createElement('div');
@@ -138,7 +147,8 @@ if (showFloatingBtn()) {
     document.getElementById('refresh_list').addEventListener('click', () => {
         refreshList();
     });
-    //列表
+    //配置界面
+	const configPanel = document.createElement('div');
     configPanel.id = 'tm_config_panel';
     configPanel.style.display = 'none';
     configPanel.innerHTML = `
