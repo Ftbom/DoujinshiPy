@@ -13,6 +13,31 @@
 {% endblock %}
 
 {% block main %}
+<style>
+    /* 弹出图片的样式 */
+    #popup-image {
+      display: none; /* 默认隐藏 */
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      border: 5px solid #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    /* 背景遮罩 */
+    #overlay {
+      display: none; /* 默认隐藏 */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+</style>
 <div class="row g-2 mb-3">
     <div class="col-6 col-md-4 col-lg-2">
         <select id="sort" class="form-select">
@@ -139,6 +164,12 @@
         </div>
     </div>
 </div>
+
+<div id="overlay"></div>
+
+<div id="popup-image">
+    <img style="width:200px" id="popup-img" src="" alt="弹出图片" width="500">
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -258,6 +289,10 @@
     }
 </script>
 <script>
+    const overlay = document.getElementById('overlay');
+    const popupImage = document.getElementById('popup-image');
+    const popupImg = document.getElementById('popup-img');
+
     async function search() {
         document.getElementById("suggestions").innerHTML = "";
         document.getElementById("sortableTable").dataset.index = "1";
@@ -314,6 +349,27 @@
             index += 1;
         }
         document.getElementById("sortableTable").dataset.index = (search_page + 1).toString();
+        document.querySelectorAll('tr').forEach(tr => {
+            try
+            {
+                const thirdTd = tr.querySelectorAll('td')[6];
+                let timer;
+                thirdTd.addEventListener('click', async () => {
+                    const selected_id = tr.getAttribute('data-uniqueid');
+                    popupImg.src = "{{ url_for('static', filename='loading.gif') }}";
+                    const blob = await getImg(`/doujinshi/${selected_id}/thumbnail`);
+                    const imgURL = URL.createObjectURL(blob);
+                    popupImg.src = imgURL;
+                    popupImage.style.display = 'block';
+                    overlay.style.display = 'block';
+                });
+            }
+            catch {}
+        });
+        overlay.addEventListener('click', () => {
+            popupImage.style.display = 'none';
+            overlay.style.display = 'none';
+        })
     }
 </script>
 <script>

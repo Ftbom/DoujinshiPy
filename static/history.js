@@ -163,9 +163,26 @@ if (showFloatingBtn()) {
         <input id="tm_url" placeholder="POSTGREST_URL" value="${config.POSTGREST_URL || ''}">
         <input id="tm_key" placeholder="POSTGREST_API_KEY" value="${config.POSTGREST_API_KEY || ''}">
         <input id="tm_table" placeholder="TABLE_NAME" value="${config.TABLE_NAME || ''}">
-        <button id="tm_save_btn">保存配置</button>
+        <div style="display: flex; gap: 10px;">
+            <button id="tm_save_btn">保存配置</button>
+            <button id="tm_clear_btn" style="background: #ff4d4f">清空配置</button>
+        </div>
     `;
     document.body.appendChild(configPanel);
+    //清空配置
+    document.getElementById('tm_clear_btn').addEventListener('click', () => {
+        localStorage.removeItem('POSTGREST_URL');
+        localStorage.removeItem('POSTGREST_API_KEY');
+        localStorage.removeItem('TABLE_NAME');
+        document.getElementById('tm_url').value = "";
+        document.getElementById('tm_key').value = "";
+        document.getElementById('tm_table').value = "";
+        config = {
+            POSTGREST_URL: null,
+            POSTGREST_API_KEY: null,
+            TABLE_NAME: null
+        };
+    });
     //保存配置
     document.getElementById('tm_save_btn').addEventListener('click', () => {
         const url = document.getElementById('tm_url').value.trim();
