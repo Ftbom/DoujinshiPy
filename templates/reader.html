@@ -23,6 +23,7 @@
         <div class="nav-left" onclick="leftClick()"></div>
         <div class="nav-right" onclick="rightClick()"></div>
         <div class="nav-center" onclick="centerClick()"></div>
+        <img id="page_0" style="height:40px;width:40px;" src="{{ url_for('static', filename='loading.gif') }}" class="comic-image">
     </div>
     <div id="page-button" style="display: flex" class="footer-controls">
         <div class="d-flex gap-3 align-items-center">
@@ -219,11 +220,13 @@
         let html2 = "";
         for (let i = 0; i < images.length; i++) {
             html += `<option>${i + 1}</option>`;
-            html2 += `<img id="page_${i}" style="display:none;height:40px;width:40px;" src="{{ url_for('static', filename='loading.gif') }}" class="comic-image">`;
+            if (i > 0)
+            {
+                html2 += `<img id="page_${i}" style="display:none;height:40px;width:40px;" src="{{ url_for('static', filename='loading.gif') }}" class="comic-image">`;
+            }
         }
         document.getElementById("pageJump").innerHTML = html;
         document.getElementById("comic-pages").innerHTML += html2;
-        document.getElementById("page_0").style = "height:40px;width:40px;";
         loadPage(parseInt(init_page) - 1);
         centerClick();
     });
