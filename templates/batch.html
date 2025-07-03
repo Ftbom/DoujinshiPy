@@ -260,11 +260,13 @@
                 try {
                     const selected_id = tr.getAttribute('data-uniqueid');
                     popupImg.src = "{{ url_for('static', filename='loading.gif') }}";
+                    popupImage.style.display = 'block';
+                    overlay.style.display = 'block';
+                    popupImg.style = 'width:20px';
                     const blob = await getImg(`/doujinshi/${selected_id}/thumbnail`);
                     const imgURL = URL.createObjectURL(blob);
                     popupImg.src = imgURL;
-                    popupImage.style.display = 'block';
-                    overlay.style.display = 'block';
+                    popupImg.style = 'width:200px';
                 } catch {}
             }
         });
