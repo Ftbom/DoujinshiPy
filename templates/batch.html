@@ -168,7 +168,7 @@
 <div id="overlay"></div>
 
 <div id="popup-image">
-    <img style="width:200px" id="popup-img" src="" alt="弹出图片" width="500">
+    <img style="width:200px" id="popup-img" src="" alt="cover" width="500">
 </div>
 {% endblock %}
 
@@ -176,6 +176,10 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script>
 <script src="{{ url_for('static', filename='ehtag.js') }}"></script>
 <script>
+    const overlay = document.getElementById('overlay');
+    const popupImage = document.getElementById('popup-image');
+    const popupImg = document.getElementById('popup-img');
+
     let groups = null;
     let tag_operations = null;
     let cover_operations = null;
@@ -246,6 +250,28 @@
         table_headers[5].style = "min-width:180px";
         table_headers[6].style = "width:70px";
         table_headers[7].style = "width:170px";
+        document.querySelector('#sortableTable tbody').addEventListener('click', async (event) => {
+            const clickedTd = event.target.closest('td');
+            if (!clickedTd) return;
+            const tr = clickedTd.closest('tr');
+            if (!tr) return;
+            const tds = tr.querySelectorAll('td');
+            if (tds[6] === clickedTd) {
+                try {
+                    const selected_id = tr.getAttribute('data-uniqueid');
+                    popupImg.src = "{{ url_for('static', filename='loading.gif') }}";
+                    const blob = await getImg(`/doujinshi/${selected_id}/thumbnail`);
+                    const imgURL = URL.createObjectURL(blob);
+                    popupImg.src = imgURL;
+                    popupImage.style.display = 'block';
+                    overlay.style.display = 'block';
+                } catch {}
+            }
+        });
+        overlay.addEventListener('click', () => {
+            popupImage.style.display = 'none';
+            overlay.style.display = 'none';
+        });
     });
 </script>
 <script>
@@ -289,10 +315,6 @@
     }
 </script>
 <script>
-    const overlay = document.getElementById('overlay');
-    const popupImage = document.getElementById('popup-image');
-    const popupImg = document.getElementById('popup-img');
-
     async function search() {
         document.getElementById("suggestions").innerHTML = "";
         document.getElementById("sortableTable").dataset.index = "1";
@@ -349,27 +371,6 @@
             index += 1;
         }
         document.getElementById("sortableTable").dataset.index = (search_page + 1).toString();
-        document.querySelectorAll('tr').forEach(tr => {
-            try
-            {
-                const thirdTd = tr.querySelectorAll('td')[6];
-                let timer;
-                thirdTd.addEventListener('click', async () => {
-                    const selected_id = tr.getAttribute('data-uniqueid');
-                    popupImg.src = "{{ url_for('static', filename='loading.gif') }}";
-                    const blob = await getImg(`/doujinshi/${selected_id}/thumbnail`);
-                    const imgURL = URL.createObjectURL(blob);
-                    popupImg.src = imgURL;
-                    popupImage.style.display = 'block';
-                    overlay.style.display = 'block';
-                });
-            }
-            catch {}
-        });
-        overlay.addEventListener('click', () => {
-            popupImage.style.display = 'none';
-            overlay.style.display = 'none';
-        })
     }
 </script>
 <script>

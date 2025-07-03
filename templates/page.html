@@ -177,7 +177,8 @@
             } catch (e) {
                 randomNum = 4;
             }
-            doujinshiDatas = await getRandomDatas(randomNum);
+            const group_id = document.getElementById("group").value;
+            doujinshiDatas = await getRandomDatas(randomNum, group_id);
         } else {
             document.getElementById("page_button").style = "";
             // 获取当前查询信息

@@ -41,16 +41,22 @@ def get_doujinshi_list(client, page, max_perpage) -> dict:
         doujinshi.append(get_metadata(client, result))
     return total, doujinshi
 
-def get_random_doujinshi_list(client, num: int) -> dict:
+def get_random_doujinshi_list(client, num: int, group) -> list:
+    if group == "":
+        key = "data:doujinshis"
+    else:
+        key = "data:group_" + group
+    if not client.exists(key):
+        return []
     # 获取列表的长度
-    list_length = client.llen("data:doujinshis")
+    list_length = client.llen(key)
     if list_length == 0:
         return []
     # 随机选择生成索引
     random_indexs = random.sample(range(0, list_length), min(num, list_length))
     doujinshi = []
     for i in random_indexs:
-        result = client.lindex("data:doujinshis", i)
+        result = client.lindex(key, i)
         doujinshi.append(get_metadata(client, result))
     return doujinshi
 

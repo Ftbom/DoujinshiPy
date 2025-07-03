@@ -332,9 +332,9 @@ def get_doujinshis_by_page(page: int = 0, token: str = Depends(oauth2)) -> dict:
     return {"msg": "success", "data": {"doujinshis": doujinshis, "total": total, "pageSize": pagesize, "page": page}}
 
 @app.get("/doujinshi/random")
-def get_random_doujinshis(num: int = 5, token: str = Depends(oauth2)) -> dict:
+def get_random_doujinshis(num: int = 5, group: str = "", token: str = Depends(oauth2)) -> dict:
     verify_token(token)
-    doujinshis = get_random_doujinshi_list(app_state["redis_client"], num)
+    doujinshis = get_random_doujinshi_list(app_state["redis_client"], num, group)
     return {"msg": "success", "data": {"doujinshis": doujinshis, "total": len(doujinshis), "pageSize": app_state["settings"]["max_num_perpage"], "page": 0}}
 
 @app.get("/doujinshi/{id}/metadata")

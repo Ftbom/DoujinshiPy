@@ -66,8 +66,8 @@ async function getDatas(query, group, source, page, reverse) {
     return parseDatas(JSON.parse(await res.text()).data.doujinshis)
 }
 
-async function getRandomDatas(num) {
-    const url = `/doujinshi/random?num=${num}`;
+async function getRandomDatas(num, group) {
+    const url = `/doujinshi/random?num=${num}&group=${group}`;
     const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     return parseDatas(JSON.parse(await res.text()).data.doujinshis)
 }
