@@ -1,3 +1,5 @@
+const has_ehtag_db = (localStorage.getItem("enable_ehtag") == "true");
+
 class SearchEngine {
     constructor(n = 2) {
         this.index = new Map();
@@ -50,53 +52,29 @@ class SearchEngine {
     }
 }
 
-function needUpdate() {
-    const savedTime = localStorage.getItem("lastupdate");
-    if (!savedTime) {
-        return true; // 没有记录，默认认为已过期
-    }
-    const savedDate = new Date(parseInt(savedTime, 10)); // 转换为日期对象
-    const now = new Date();
-    // 计算 savedDate + 1 个月的日期
-    const oneMonthLater = new Date(savedDate);
-    oneMonthLater.setMonth(savedDate.getMonth() + 1);
-    return now >= oneMonthLater; // 如果当前时间大于等于 oneMonthLater，则超过 1 个月
-}
-
 const dbManager = {
     db: null,
     tagstore: false,
     engine: new SearchEngine(),
 
     async init() {
-        const need_load = await this.loadEhDatabase();
-        if (need_load) {
-            const db = await this.initDB();
-            this.tagstore = await this.loadEngineFromDB(db);
-            this.db = db;
-        }
+        const db = await this.initDB();
+        this.tagstore = await this.loadEngineFromDB(db);
+        this.db = db;
     },
 
     async loadEhDatabase() {
-        if (!needUpdate()) {
-            return true;
-        }
         // 加载中
         const loading = document.createElement("div");
         loading.innerHTML = `<div id="loading-ehtag" class="loading-mask">
             <div class="spinner"></div>
-                <p>更新EHTag数据库...</p>
+                <p>加载EHTag数据库...</p>
             </div>`;
         document.body.appendChild(loading);
-        // 删除旧数据
-        indexedDB.deleteDatabase('TagDatabase').onsuccess = () => {
-            console.log("delete old database");
-        };
         // 获取新数据
         const script = document.createElement("script");
         script.src = "https://github.com/EhTagTranslation/Database/releases/latest/download/db.text.js";
         document.body.appendChild(script);
-        return false;
     },
 
     initDB() {
@@ -120,6 +98,10 @@ const dbManager = {
     },
 
     async addDatas(tagdata) {
+        // 删除旧数据
+        indexedDB.deleteDatabase('TagDatabase').onsuccess = () => {
+            console.log("delete old database");
+        };
         const db = await this.initDB();
         return new Promise((resolve, reject) => {
             const data_str = [];
@@ -130,7 +112,6 @@ const dbManager = {
                 reject(event.target.error);
             };
             const promises = [];
-            let index = 1;
             for (let i = 1; i < 12; i++) {
                 for (let key of Object.keys(tagdata.data[i].data)) {
                     const value = tagdata.data[i].data[key].name;
@@ -141,8 +122,6 @@ const dbManager = {
                     data_str.push(str);
                     const item = { key: key, value: value };
                     const request = objectStore.put(item);
-                    this.engine.addData(index, item.value, item.key);
-                    index++;
                     promises.push(new Promise((resolve, reject) => {
                         request.onsuccess = () => resolve();
                         request.onerror = (event) => {
@@ -152,12 +131,10 @@ const dbManager = {
                     }));
                 }
             }
-            this.db = db;
-            // 记录更新时间
-            localStorage.setItem("lastupdate", Date.now());
-            this.tagstore = true;
+            // 数据加载完成
+            localStorage.setItem("enable_ehtag", true);
             // 加载中消失
-            document.getElementById("loading-ehtag").style.display = "none";
+            document.getElementById("loading-ehtag").remove();
             Promise.all(promises).then(() => {
                 console.log('Transaction completed successfully');
                 resolve();
@@ -224,13 +201,22 @@ function load_ehtagtranslation_db_text(data) {
 let isMouseOverSuggestions = false;
 
 // 监听 input 失去焦点
-document.getElementById("search").addEventListener("blur", function () {
-    setTimeout(() => {
-        if (!isMouseOverSuggestions) {
-            document.getElementById("suggestions").innerHTML = "";
-        }
-    }, 500);
-});
+try
+{
+    document.getElementById("search").addEventListener("blur", function () {
+        setTimeout(() => {
+            if (!isMouseOverSuggestions) {
+                document.getElementById("suggestions").innerHTML = "";
+            }
+        }, 500);
+    });
+    // 初始化标签数据库
+    if (has_ehtag_db)
+    {
+        dbManager.init();
+    }
+}
+catch {}
 
 function handleSuggestions(event) {
     if (event.key === "Enter") {
@@ -259,7 +245,15 @@ function selectSuggestionItem(suggestion) {
 }
 
 async function showSuggestions(query) {
-    const suggestions = await dbManager.search(query);
+    let suggestions;
+    if (has_ehtag_db)
+    {
+        suggestions = await dbManager.search(query);
+    }
+    else
+    {
+        suggestions = [];
+    }
     let suggestionsHtml = "";
     for (let suggestion of suggestions) {
         if (suggestion == null) {
@@ -272,6 +266,3 @@ async function showSuggestions(query) {
     }
     document.getElementById("suggestions").innerHTML = suggestionsHtml;
 }
-
-// 初始化数据库和标签存储
-dbManager.init();

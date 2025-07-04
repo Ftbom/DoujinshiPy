@@ -41,7 +41,7 @@
 <div class="section">
     <div class="title">设置操作</div>
     <div class="input-row">
-        <label for="proxy">API代理WEB图片:</label>
+        <label for="proxy">代理WEB图片:</label>
         <input type="checkbox" id="proxy" class="bool-checkbox">
     </div>
     <div class="input-row">
@@ -52,11 +52,19 @@
         <label for="randomNum">随机数目:</label>
         <input type="number" id="randomNum">
     </div>
+    <div class="input-row">
+        <label for="tag">Tag提示词:</label>
+        <div style="display: flex; align-items: center;gap: 8px;">
+            <button onclick="updateDatabase()">更新数据库</button>
+            <input type="checkbox" id="tag" class="bool-checkbox" value="true">
+        </div>
+    </div>
 </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='ehtag.js') }}"></script>
 <script>
     function saveSettings() {
         let num = document.getElementById("maxPerPage").value;
@@ -71,9 +79,26 @@
         catch (e) {}
     }
 
+    function updateDatabase() {
+        if (document.getElementById("tag").checked)
+        {
+            dbManager.loadEhDatabase();
+        }
+    }
+
     document.getElementById("proxy").addEventListener("click", saveSettings);
     document.getElementById("maxPerPage").addEventListener("input", saveSettings);
     document.getElementById("randomNum").addEventListener("input", saveSettings);
+    document.getElementById("tag").addEventListener("click", () => {
+        if (document.getElementById("tag").checked)
+        {
+            dbManager.loadEhDatabase();
+        }
+        else
+        {
+            localStorage.setItem("enable_ehtag", false);
+        }
+    });
     $(document).ready(async function () {
         //更新界面
         const info = await getServerInfo();
@@ -98,6 +123,7 @@
         } else {
             document.getElementById("randomNum").value = parseInt(randomNum);
         }
+        document.getElementById("tag").checked = (localStorage.getItem("enable_ehtag") == "true");
     });
 </script>
 <script>
