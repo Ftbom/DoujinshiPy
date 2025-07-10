@@ -532,7 +532,7 @@ def restore_files(zip_bytes, client):
             with zipf.open(member) as source, open(target_path, "wb") as target:
                 shutil.copyfileobj(source, target)
     client.delete("restore_task")
-    os._exit(1)
+    os._exit(1) # 触发on-failure重启
 
 def file_init() -> None:
     os.makedirs(".data", exist_ok = True)

@@ -502,11 +502,11 @@ def get_doujinshi_page_by_number(id: str, num: int, token: str = Depends(oauth2)
 def get_thumbnail(id: str, token: str = Depends(oauth2)) -> FileResponse:
     verify_token(token)
     if id == "nothumb":
-        return FileResponse("nothumb.png")
+        return FileResponse("static/nothumb.png")
     thumb_path = f".data/thumb/{id}.jpg"
     if os.path.exists(thumb_path):
         return FileResponse(thumb_path)
-    return FileResponse("nothumb.png")
+    return FileResponse("static/nothumb.png")
 
 @app.get("/search")
 def search(query: str, page: int = 0, source_name: str = "", group: str = "", token: str = Depends(oauth2)) -> dict:

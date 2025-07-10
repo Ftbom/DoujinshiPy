@@ -4,6 +4,27 @@
 
 **需要先安装unrar和redis**
 
+配置文件`.data/config.json`：
+
+```
+{
+  "settings": {
+    "host": "0.0.0.0",
+    "port": 9000,
+    "redis_db": 0, # redis数据库编号
+    "proxy": "",
+    "proxy_webpage": False,
+    "passwd": "demo",
+    "max_num_perpage": 12, # 每页最大doujinshi数
+    "max_cache_size": 2048, # 2GB
+    "cache_expire": 30, # 天
+    "tag_translate": False # 是否对tag进行翻译
+  },
+  "source": {
+  }
+}
+```
+
 ```shell
 python app.py
 ```
