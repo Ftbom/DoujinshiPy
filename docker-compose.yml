@@ -2,13 +2,5 @@ version: "3.9"
 services:
   app:
     build: .
-    depends_on:
-      - redis
-    environment:
-      - REDIS_HOST=redis
     ports:
       - "9000:9000"
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
