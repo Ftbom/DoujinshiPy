@@ -7,10 +7,11 @@ from lib.page import *
 from lib.utils import *
 from lib.batch import *
 from lib.database import *
-from fastapi import FastAPI, HTTPException, Depends, status, Request
+from datetime import datetime
 from lib.utils import get_file_infos
-from starlette.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import FastAPI, HTTPException, Depends, status, Request, File, UploadFile
+from starlette.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
 app = FastAPI()
 
@@ -106,6 +107,51 @@ def get_status(token: str = Depends(oauth2)) -> dict:
                      "max_num_perpage": app_state["settings"]["max_num_perpage"]},
                 "sources": get_sources(), # 可用源及“插件”
                 "batch_operations": {"tag": get_file_infos("tag"), "cover": get_file_infos("cover")}}
+
+@app.get("/backup")
+def list_backups(token: str = Depends(oauth2)):
+    verify_token(token)
+    backup_dir = ".data/backup"
+    files = [f for f in os.listdir(backup_dir) if os.path.isfile(os.path.join(backup_dir, f))]
+    task_name = app_state["redis_client"].get("backup_task")
+    if task_name:
+        files.remove(task_name)
+        return {"running": task_name, "backups": files}
+    return {"running": None, "backups": files}
+
+@app.get("/backup/{filename}")
+def download_backup(filename: str, token: str = Depends(oauth2)):
+    verify_token(token)
+    path = os.path.join(".data/backup", filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code = 404, detail = "backup file not found")
+    return FileResponse(path, filename = filename)
+
+@app.post("/backup")
+def restore_backup(backup_file: UploadFile = File(...), token: str = Depends(oauth2)):
+    verify_token(token)
+    zip_bytes = backup_file.file.read()
+    client = app_state["redis_client"]
+    if client.exists("restore_task"):
+        return {"info": "restore task already running"}
+    client.set("restore_task", 1)
+    try:
+        restore_files(zip_bytes, client)
+    except Exception as e:
+        client.delete("restore_task")
+        raise HTTPException(status_code = 500, detail = f"restore failed: {e}")
+    return {"info": "restore succeeded, please restart"}
+
+@app.put("/backup")
+def create_new_backup(token: str = Depends(oauth2)):
+    verify_token(token)
+    client = app_state["redis_client"]
+    if client.exists("backup_task"):
+        return {"info": "backup task already running"}
+    time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + ".zip"
+    client.set("backup_task", time_str)
+    threading.Thread(target = backup_files, args = (time_str, client)).start()
+    return {"info": "backup task start running"}
 
 @app.post("/settings")
 def update_settings(settings: SettingValues, token: str = Depends(oauth2)) -> dict:

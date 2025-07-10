@@ -1,8 +1,10 @@
 import os
+import io
 import time
 import uuid
 import json
 import shutil
+import zipfile
 import logging
 import requests
 import importlib
@@ -499,6 +501,73 @@ def clear_keys_from_redis(client, key_prefix: str) -> None:
         if cursor == 0:
             break
 
+def backup_files(file_name, client) -> None:
+    with zipfile.ZipFile(f".data/backup/{file_name}", "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(".data"):
+            # 排除cache子文件夹
+            if "cache" in dirs:
+                dirs.remove("cache")
+            if "backup" in dirs:
+                dirs.remove("backup")
+            for file in files:
+                abs_path = os.path.join(root, file)
+                rel_path = os.path.relpath(abs_path, ".data")
+                zipf.write(abs_path, arcname = rel_path)
+    client.delete("backup_task")
+
+def restore_files(zip_bytes, client):
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zipf:
+        for member in zipf.namelist():
+            if member.endswith('/'):
+                os.makedirs(os.path.join(".data", member), exist_ok = True)
+                continue
+            target_path = os.path.join(".data", member + ".bak")
+            # 如果目标路径已存在，先删除
+            if os.path.exists(target_path):
+                if os.path.isfile(target_path):
+                    os.remove(target_path)
+                elif os.path.isdir(target_path):
+                    shutil.rmtree(target_path)
+            # 提取文件或文件夹
+            with zipf.open(member) as source, open(target_path, "wb") as target:
+                shutil.copyfileobj(source, target)
+    client.delete("restore_task")
+    os._exit(1)
+
+def file_init() -> None:
+    os.makedirs(".data", exist_ok = True)
+    os.makedirs(".data/cache", exist_ok = True)
+    os.makedirs(".data/thumb", exist_ok = True)
+    os.makedirs(".data/backup", exist_ok = True)
+    for root, dirs, files in os.walk(".data"):
+        for file in files:
+            if file.endswith(".bak"):
+                file_ = file.removesuffix(".bak")
+                abs_path = os.path.join(root, file)
+                abs_path_ = os.path.join(root, file_)
+                if os.path.exists(abs_path_):
+                    os.remove(abs_path_)
+                os.rename(abs_path, abs_path_)
+    if os.path.exists(".data/config.json"):
+        return
+    with open(".data/config.json", "w", encoding = "utf-8") as f:
+        f.write(json.dumps({
+            "settings": {
+                "host": "0.0.0.0",
+                "port": 9000,
+                "redis_db": 0, # redis数据库编号
+                "proxy": "",
+                "proxy_webpage": False,
+                "passwd": "demo",
+                "max_num_perpage": 12, # 每页最大doujinshi数
+                "max_cache_size": 2048, # 2GB
+                "cache_expire": 30, # 天
+                "tag_translate": False # 是否对tag进行翻译（针对other:xxx,female:xxx格式）
+            },
+            "source": {
+            }
+        }, indent = 4))
+
 def app_init(app_state) -> None:
     client = app_state["redis_client"]
     try:
@@ -506,8 +575,6 @@ def app_init(app_state) -> None:
     except:
         print("please start redis first")
         exit()
-    os.makedirs(".data/cache", exist_ok = True)
-    os.makedirs(".data/thumb", exist_ok = True)
     # 缓存大小检查
     cache_size = get_cache_size()
     cache_size_limit = app_state["settings"]["max_cache_size"] * 1024 * 1024

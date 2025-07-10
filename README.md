@@ -1,14 +1,8 @@
 # DoujinshiPy
 
-## 安装
+## 运行
 
 **需要先安装unrar和redis**
-
-```shell
-python install.py
-```
-
-## 运行
 
 ```shell
 python app.py

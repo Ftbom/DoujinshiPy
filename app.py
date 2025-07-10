@@ -3,6 +3,8 @@ import logging
 from lib.utils import *
 from fastapi.middleware.wsgi import WSGIMiddleware
 
+file_init() # check file
+
 logging.basicConfig(filename = ".data/info.log", encoding = "utf-8",
                     format = "%(levelname)s %(asctime)s %(message)s", level = logging.INFO)
 
