@@ -207,3 +207,61 @@ async function getPages(id) {
     }
     return result.data;
 }
+
+async function create_backup_file() {
+    const res = await fetch("/backup", {
+        method: "PUT",
+        headers: { Authorization: "Bearer " + token }
+    });
+    if (!res.ok) {
+        return -1;
+    }
+    let result = JSON.parse(await res.text());
+    if (result.msg.search("already running") != -1)
+    {
+        return 0;
+    }
+    return 1;
+}
+
+async function restore_backup_file(formData) {
+    const res = await fetch("/backup", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token },
+        body: formData
+    });
+    if (!res.ok) {
+        return -1;
+    }
+    let result = JSON.parse(await res.text());
+    if (result.msg.search("already running") != -1)
+    {
+        return 0;
+    }
+    return 1;
+}
+
+async function get_backups() {
+    const res = await fetch("/backup", {
+        method: "GET",
+        headers: { Authorization: "Bearer " + token },
+    });
+    return JSON.parse(await res.text());
+}
+
+async function download_backup_file(filename)
+{
+    try {
+        const response = await fetch(`/backup/${filename}`, {
+            method: "GET",
+            headers: { Authorization: "Bearer " + token },
+        });
+        if (!response.ok) {
+            throw new Error(`下载失败：${response.statusText}`);
+        }
+        return await response.blob();
+    } catch (error) {
+        alert("下载失败!");
+        return null;
+    }
+}

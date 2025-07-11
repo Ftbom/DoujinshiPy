@@ -59,7 +59,23 @@
             <input type="checkbox" id="tag" class="bool-checkbox" value="true">
         </div>
     </div>
-</div>
+    <div class="input-row">
+        <label for="backup">备份:</label>
+        <div style="display: flex; align-items: center;gap: 8px;">
+            <button id="create_backup" onclick="create_backup()">创建新备份</button>
+            <select id="backup"></select>
+            <button id="download_backup" onclick="download_backup()">下载备份</button>
+        </div>
+    </div>
+    <div class="input-row">
+        <label for="restore">恢复备份:</label>
+        <div style="display: flex; align-items: center;gap: 8px;">
+            <form id="uploadForm">
+                <input type="file" name="backup_file" id="backup_file">
+                <button type="button" onclick="restore_backup()">恢复备份</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -124,6 +140,8 @@
             document.getElementById("randomNum").value = parseInt(randomNum);
         }
         document.getElementById("tag").checked = (localStorage.getItem("enable_ehtag") == "true");
+        let result = await get_backups();
+        set_backup_list(result.backups);
     });
 </script>
 <script>
@@ -190,6 +208,92 @@
         }
         startBatch = true; //设置标志位
         handleProgress("/add", true); //显示进度条
+    }
+</script>
+<script>
+    function set_backup_list(backups)
+    {
+        const select = document.getElementById("backup");
+        select.innerHTML = "";
+        backups.forEach(filename => {
+            const option = document.createElement("option");
+            option.value = filename;
+            option.textContent = filename;
+            select.appendChild(option);
+        });
+    }
+
+    async function create_backup()
+    {
+        let status = await create_backup_file();
+        if (status == -1)
+        {
+            alert("网络错误！");
+            return;
+        }
+        else if (status == 0)
+        {
+            alert("请不要重复提交备份任务！");
+            return;
+        }
+        document.getElementById("create_backup").textContent = "备份中...";
+        const interval = setInterval(async () => {
+            let result = await get_backups();
+            if (result.running == null) {
+                clearInterval(interval);
+                document.getElementById("create_backup").textContent = "创建新备份";
+                set_backup_list(result.backups);
+            }
+        }, 1000);
+    }
+
+    async function restore_backup()
+    {
+        const fileInput = document.getElementById("backup_file");
+        const file = fileInput.files[0];
+        if (!file) {
+            alert("请先选择一个文件");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("backup_file", file);
+        document.getElementById("create_backup").textContent = "恢复备份中...";
+        let status = await restore_backup_file(formData);
+        if (status == -1)
+        {
+            alert("网络错误！");
+        }
+        else if (status == 0)
+        {
+            alert("请不要重复提交备份任务！");
+        }
+        document.getElementById("create_backup").textContent = "恢复备份";
+    }
+
+    async function download_backup()
+    {
+        const select = document.getElementById("backup");
+        const filename = select.value;
+        if (!filename) {
+            alert("请选择一个备份文件");
+            return;
+        }
+        document.getElementById("download_backup").textContent = "下载中...";
+        let blob = await download_backup_file(filename);
+        if (blob != null)
+        {
+            const url = window.URL.createObjectURL(blob);
+            // 创建临时链接并点击下载
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            // 清理
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        document.getElementById("download_backup").textContent = "下载备份";
     }
 </script>
 {% endblock %}

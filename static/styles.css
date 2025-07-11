@@ -147,25 +147,29 @@ td {
 
 .input-row {
     display: flex;
+    flex-wrap: wrap; /* 允许换行 */
     align-items: center;
     margin-bottom: 15px;
     justify-content: space-between;
+    gap: 10px;
 }
 
 .input-row label {
-    margin-right: 15px;
-    width: 120px;
+    margin-right: 0;
+    width: 100%;
     font-weight: normal;
-    text-align: right;
+    text-align: left;
 }
 
 .input-row input,
-.input-row select {
+.input-row select,
+.input-row .edit-box {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
-    width: 180px;
+    width: 100%; /* 自适应宽度 */
+    box-sizing: border-box;
 }
 
 .input-row button {
@@ -176,8 +180,7 @@ td {
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    width: 120px;
-    margin-left: 10px;
+    width: 100%;
 }
 
 .input-row button:hover {
@@ -190,13 +193,35 @@ td {
 }
 
 .input-row .edit-box {
-    width: 100%;
     height: 60px;
-    padding: 8px;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
     resize: vertical;
+}
+
+/* 桌面端样式优化 */
+@media (min-width: 768px) {
+    .input-row {
+        flex-wrap: nowrap;
+    }
+
+    .input-row label {
+        width: 120px;
+        text-align: right;
+        margin-right: 15px;
+    }
+
+    .input-row input,
+    .input-row select {
+        width: 180px;
+    }
+
+    .input-row .edit-box {
+        width: 80%;
+    }
+
+    .input-row button {
+        width: 120px;
+        margin-left: 10px;
+    }
 }
 
 .comic-container {

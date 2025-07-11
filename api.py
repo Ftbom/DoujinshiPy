@@ -133,25 +133,25 @@ def restore_backup(backup_file: UploadFile = File(...), token: str = Depends(oau
     zip_bytes = backup_file.file.read()
     client = app_state["redis_client"]
     if client.exists("restore_task"):
-        return {"info": "restore task already running"}
+        return {"msg": "restore task already running"}
     client.set("restore_task", 1)
     try:
         restore_files(zip_bytes, client)
     except Exception as e:
         client.delete("restore_task")
         raise HTTPException(status_code = 500, detail = f"restore failed: {e}")
-    return {"info": "restore succeeded, please restart"}
+    return {"msg": "restore succeeded, please restart"}
 
 @app.put("/backup")
 def create_new_backup(token: str = Depends(oauth2)):
     verify_token(token)
     client = app_state["redis_client"]
     if client.exists("backup_task"):
-        return {"info": "backup task already running"}
+        return {"msg": "backup task already running"}
     time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + ".zip"
     client.set("backup_task", time_str)
     threading.Thread(target = backup_files, args = (time_str, client)).start()
-    return {"info": "backup task start running"}
+    return {"msg": "backup task start running"}
 
 @app.post("/settings")
 def update_settings(settings: SettingValues, token: str = Depends(oauth2)) -> dict:
