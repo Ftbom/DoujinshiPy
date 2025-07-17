@@ -140,6 +140,7 @@ def restore_backup(backup_file: UploadFile = File(...), token: str = Depends(oau
     except Exception as e:
         client.delete("restore_task")
         raise HTTPException(status_code = 500, detail = f"restore failed: {e}")
+    threading.Thread(target = on_failure_exit, args = ()).start()
     return {"msg": "restore succeeded, please restart"}
 
 @app.put("/backup")

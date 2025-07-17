@@ -448,10 +448,14 @@ def get_cache_size() -> int:
 
 def update_ehtag_database(proxy):
     print("check for EhTagTranslation database update...")
-    releases_url = "https://api.github.com/repos/EhTagTranslation/Database/releases"
-    content = requests.get(releases_url, proxies = proxy).content
-    json_data = json.loads(content)
-    release_tag_name = json_data[0]["tag_name"]
+    release_tag_name = ""
+    try:
+        releases_url = "https://api.github.com/repos/EhTagTranslation/Database/releases"
+        content = requests.get(releases_url, proxies = proxy).content
+        json_data = json.loads(content)
+        release_tag_name = json_data[0]["tag_name"]
+    except:
+        release_tag_name = "v1"
     if not os.path.exists(f".data/tag_database.{release_tag_name}.json"):
         for file_name in os.listdir(".data"):
             if "tag_database" in file_name:
@@ -515,6 +519,10 @@ def backup_files(file_name, client) -> None:
                 zipf.write(abs_path, arcname = rel_path)
     client.delete("backup_task")
 
+def on_failure_exit():
+    time.sleep(1)
+    os._exit(1) # 触发on-failure重启
+
 def restore_files(zip_bytes, client):
     with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zipf:
         for member in zipf.namelist():
@@ -532,7 +540,6 @@ def restore_files(zip_bytes, client):
             with zipf.open(member) as source, open(target_path, "wb") as target:
                 shutil.copyfileobj(source, target)
     client.delete("restore_task")
-    os._exit(1) # 触发on-failure重启
 
 def file_init() -> None:
     os.makedirs(".data", exist_ok = True)

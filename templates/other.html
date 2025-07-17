@@ -72,7 +72,7 @@
         <div style="display: flex; align-items: center;gap: 8px;">
             <form id="uploadForm">
                 <input type="file" name="backup_file" id="backup_file">
-                <button type="button" onclick="restore_backup()">恢复备份</button>
+                <button id="restore_file" type="button" onclick="restore_backup()">恢复备份</button>
             </form>
         </div>
     </div>
@@ -257,7 +257,7 @@
         }
         const formData = new FormData();
         formData.append("backup_file", file);
-        document.getElementById("create_backup").textContent = "恢复备份中...";
+        document.getElementById("restore_file").textContent = "恢复备份中...";
         let status = await restore_backup_file(formData);
         if (status == -1)
         {
@@ -267,7 +267,7 @@
         {
             alert("请不要重复提交备份任务！");
         }
-        document.getElementById("create_backup").textContent = "恢复备份";
+        document.getElementById("restore_file").textContent = "恢复备份";
     }
 
     async function download_backup()
