@@ -455,10 +455,12 @@ def update_ehtag_database(proxy):
         json_data = json.loads(content)
         release_tag_name = json_data[0]["tag_name"]
     except:
-        release_tag_name = "v1"
+        release_tag_name = "none"
     if not os.path.exists(f".data/tag_database.{release_tag_name}.json"):
         for file_name in os.listdir(".data"):
             if "tag_database" in file_name:
+                if release_tag_name == "none":
+                    return file_name.replace("tag_database.", "").replace(".json", "")
                 try:
                     os.remove(os.path.join(".data", file_name))
                 except:
