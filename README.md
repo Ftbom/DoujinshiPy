@@ -25,6 +25,12 @@
 }
 ```
 
+安装pip包：
+
+```shell
+pip install -r requirements.txt
+```
+
 ```shell
 python app.py
 ```
